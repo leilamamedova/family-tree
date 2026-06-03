@@ -1,4 +1,5 @@
 import { gql, TypedDocumentNode } from '@apollo/client';
+
 import { Person } from '@/types/person';
 
 type GetPersonsData = {

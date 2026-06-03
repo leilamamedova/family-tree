@@ -22,8 +22,8 @@ This application allows users to create, edit, visualize, and manage dynamic fam
 - Add new family members
 - Edit existing people
 - Delete family members
-- Upload profile images
-- Add birth / death years
+- Upload / Delete profile images
+- Add birth / death date
 - Add descriptions / biography
 
 ## Relationship Management
@@ -32,7 +32,6 @@ This application allows users to create, edit, visualize, and manage dynamic fam
 - Assign spouses
 - Automatic spouse synchronization
 - Automatic shared parent assignment
-- Prevent duplicate spouses
 
 ## User Experience
 
@@ -86,57 +85,6 @@ Frontend and backend are implemented inside a single Next.js project using App R
 - Relationship synchronization
 - Data validation
 - Family logic
-
----
-
-# Project Structure
-
-```bash
-src/
-│
-├── app/
-│   │
-│   ├── api/
-│   │   └── graphql/
-│   │       └── route.ts
-│   │
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx
-│
-├── components/
-│   │
-│   ├── providers/
-│   │   ├── ApolloProvider.tsx
-│   │   └── ReactFlowProvider.tsx
-│   │
-│   ├── tree/
-│   │   ├── TreeView.tsx
-│   │   ├── PersonNode.tsx
-│   │   ├── PersonModal.tsx
-│   │   ├── AddPersonModal.tsx
-│   │   ├── SearchBar.tsx
-│   │   └── FamilyConnectorNode.tsx
-│   │
-│   └── ui/
-│       └── ConfirmModal.tsx
-│
-├── graphql/
-│   ├── personOperations.ts
-│   ├── resolvers.ts
-│   └── typeDefs.ts
-│
-├── lib/
-│   ├── apollo-client.ts
-│   ├── buildTreeLayout.ts
-│   └── mongodb.ts
-│
-├── models/
-│   └── PersonModel.ts
-│
-└── types/
-    └── person.ts
-```
 
 ---
 
@@ -230,7 +178,7 @@ Invisible connector nodes are used to create cleaner family tree layouts between
 
 # Current Limitations
 
-- Images are currently stored as local object URLs
+- Images are uploaded and stored locally inside `public/uploads`
 - No authentication system yet
 - No cloud image storage yet
 - No drag-and-drop node repositioning persistence

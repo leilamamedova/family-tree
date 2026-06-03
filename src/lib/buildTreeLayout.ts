@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+
 import { Person } from '@/types/person';
 
 type LayoutNode = {
@@ -44,9 +45,6 @@ export function buildTreeLayout(people: Person[]) {
   const SPOUSE_GAP = 160;
   const CONNECTOR_OFFSET_Y = 165;
   const CONNECTOR_SIZE = 8;
-
-  // PersonNode visual circle is 80px wide.
-  // React Flow position is top-left, but handles are visually centered.
   const PERSON_HANDLE_CENTER_X = 40;
 
   function getCoupleKey(a: string, b: string) {

@@ -1,32 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Person } from '@/types/person';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
-import { format } from 'date-fns';
+
+import { getFullName } from '@/lib/text';
+import { formatDate } from '@/lib/date';
+import { Person } from '@/types/person';
 
 type Props = {
   people: Person[];
   onSelect: (person: Person) => void;
   onClear?: () => void;
 };
-
-function formatDate(value?: string | null) {
-  if (!value) return '';
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return '';
-
-  return format(date, 'dd.MM.yyyy');
-}
-
-function getFullName(person: Person) {
-  return [person.firstName, person.lastName, person.patronymic]
-    .filter(Boolean)
-    .join(' ');
-}
 
 export default function SearchBar({ people, onSelect, onClear }: Props) {
   const [query, setQuery] = useState('');

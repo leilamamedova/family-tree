@@ -1,10 +1,12 @@
 'use client';
 
 import { Handle, Position } from 'reactflow';
-import { Person } from '@/types/person';
 import clsx from 'clsx';
 import Image from 'next/image';
-import { format } from 'date-fns';
+
+import { formatDate } from '@/lib/date';
+import { getFullName } from '@/lib/text';
+import { Person } from '@/types/person';
 
 type Props = {
   data: {
@@ -13,22 +15,6 @@ type Props = {
     highlighted?: boolean;
   };
 };
-
-function formatDate(value?: string | null) {
-  if (!value) return '';
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return '';
-
-  return format(date, 'dd.MM.yyyy');
-}
-
-function getFullName(person: Person) {
-  return [person.firstName, person.lastName, person.patronymic]
-    .filter(Boolean)
-    .join(' ');
-}
 
 export default function PersonNode({ data }: Props) {
   const { person, onClick, highlighted } = data;

@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Person } from '@/types/person';
 import Image from 'next/image';
 import DatePicker from 'react-datepicker';
-import PersonSelect from './PersonSelect';
+import { format } from 'date-fns';
+
+import PersonSelect from '@/components/tree/PersonSelect';
+import { useGlobalLoading } from '@/components/providers/GlobalLoadingProvider';
 import { uploadImage } from '@/lib/uploadImage';
-import { format, isValid, parse } from 'date-fns';
+import { formatDateInput, parseDateInput, validateDateInput } from '@/lib/date';
+import { Person } from '@/types/person';
 
 import 'react-datepicker/dist/react-datepicker.css';
-import { useGlobalLoading } from '../providers/GlobalLoadingProvider';
 
 type Mode = 'root' | 'child' | 'parent';
 
@@ -20,34 +22,6 @@ type Props = {
   onClose: () => void;
   onCreate: (person: Person, mode: Mode) => void;
 };
-
-function formatDateInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-
-  return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
-}
-
-function parseDateInput(value: string) {
-  if (!value) return null;
-  if (value.length !== 10) return null;
-
-  const parsedDate = parse(value, 'dd.MM.yyyy', new Date());
-
-  if (!isValid(parsedDate)) return null;
-
-  if (format(parsedDate, 'dd.MM.yyyy') !== value) return null;
-
-  return parsedDate;
-}
-
-function validateDateInput(value: string) {
-  if (!value) return true;
-
-  return !!parseDateInput(value);
-}
 
 export default function AddPersonModal({
   isOpen,

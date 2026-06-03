@@ -1,24 +1,25 @@
 'use client';
 
-import ReactFlow, { Background, Controls, useReactFlow } from 'reactflow';
-import 'reactflow/dist/style.css';
-
 import { useMemo, useState } from 'react';
+import ReactFlow, { Background, Controls, useReactFlow } from 'reactflow';
 import { useMutation, useQuery } from '@apollo/client/react';
+
 import PersonNode from './PersonNode';
-import FamilyConnectorNode from './FamilyConnectorNode';
-import SearchBar from './SearchBar';
-import { Person } from '@/types/person';
-import { buildTreeLayout } from '@/lib/buildTreeLayout';
-import PersonModal from './PersonModal';
-import AddPersonModal from './AddPersonModal';
+import FamilyConnectorNode from '@/components/tree/FamilyConnectorNode';
+import SearchBar from '@/components/tree/SearchBar';
+import PersonModal from '@/components/tree/PersonModal';
+import AddPersonModal from '@/components/tree/AddPersonModal';
+import { useGlobalLoading } from '@/components/providers/GlobalLoadingProvider';
 import {
   CREATE_PERSON,
   DELETE_PERSON,
   GET_PERSONS,
   UPDATE_PERSON,
 } from '@/graphql/personOperations';
-import { useGlobalLoading } from '../providers/GlobalLoadingProvider';
+import { buildTreeLayout } from '@/lib/buildTreeLayout';
+import { Person } from '@/types/person';
+
+import 'reactflow/dist/style.css';
 
 const nodeTypes = {
   person: PersonNode,

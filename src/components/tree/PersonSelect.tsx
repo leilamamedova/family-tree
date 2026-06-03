@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Person } from '@/types/person';
 import clsx from 'clsx';
+
+import { getFullName } from '@/lib/text';
+import { Person } from '@/types/person';
 
 type Props = {
   people: Person[];
@@ -12,12 +14,6 @@ type Props = {
   showSpouseName?: boolean;
   onChange: (personId: string) => void;
 };
-
-function getFullName(person: Person) {
-  return [person.firstName, person.lastName, person.patronymic]
-    .filter(Boolean)
-    .join(' ');
-}
 
 function getOptionLabel(
   person: Person,
@@ -44,8 +40,8 @@ export default function PersonSelect({
   value,
   placeholder,
   emptyLabel,
-  onChange,
   showSpouseName = false,
+  onChange,
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 

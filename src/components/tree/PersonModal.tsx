@@ -1,18 +1,27 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import ConfirmModal from '@/components/ui/ConfirmModal';
-import { Person } from '@/types/person';
 import { Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import DatePicker from 'react-datepicker';
-import { format, isValid, parse } from 'date-fns';
-import PersonSelect from './PersonSelect';
+import { format } from 'date-fns';
+
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import PersonSelect from '@/components/tree/PersonSelect';
+import { useGlobalLoading } from '@/components/providers/GlobalLoadingProvider';
+import {
+  formatDate,
+  formatDateInput,
+  parseDate,
+  parseDateInput,
+  validateDateInput,
+} from '@/lib/date';
+import { getFullName, getParentsText, getSiblingsText } from '@/lib/text';
+import { Person } from '@/types/person';
 import { uploadImage } from '@/lib/uploadImage';
 import { deleteImage } from '@/lib/deleteImage';
 
 import 'react-datepicker/dist/react-datepicker.css';
-import { useGlobalLoading } from '../providers/GlobalLoadingProvider';
 
 type Props = {
   selectedPerson: Person | null;
@@ -35,95 +44,6 @@ type EditForm = {
   parentId: string;
   spouseId: string;
 };
-
-function formatDateInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-
-  return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
-}
-
-function parseDateInput(value: string) {
-  if (!value) return null;
-  if (value.length !== 10) return null;
-
-  const parsedDate = parse(value, 'dd.MM.yyyy', new Date());
-
-  if (!isValid(parsedDate)) return null;
-
-  if (format(parsedDate, 'dd.MM.yyyy') !== value) return null;
-
-  return parsedDate;
-}
-
-function validateDateInput(value: string) {
-  if (!value) return true;
-
-  return !!parseDateInput(value);
-}
-
-function parseDate(value?: string | null) {
-  if (!value) return null;
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return null;
-
-  return date;
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return '';
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return '';
-
-  return format(date, 'dd.MM.yyyy');
-}
-
-function getFullName(person: Person) {
-  return [person.firstName, person.lastName, person.patronymic]
-    .filter(Boolean)
-    .join(' ');
-}
-
-function getParentsText(person: Person, people: Person[]) {
-  if (!person.parents?.length) {
-    return 'Qeyd olunmayıb';
-  }
-
-  return person.parents
-    .map((parentId) => {
-      const parent = people.find((p) => p.id === parentId);
-
-      if (!parent) return null;
-
-      return getFullName(parent);
-    })
-    .filter(Boolean)
-    .join(', ');
-}
-
-function getSiblingsText(person: Person, people: Person[]) {
-  if (!person.parents?.length) {
-    return 'Qeyd olunmayıb';
-  }
-
-  const siblings = people.filter((p) => {
-    if (p.id === person.id) return false;
-
-    return p.parents?.some((parentId) => person.parents.includes(parentId));
-  });
-
-  if (!siblings.length) {
-    return 'Qeyd olunmayıb';
-  }
-
-  return siblings.map(getFullName).join(', ');
-}
 
 function createEditForm(person: Person): EditForm {
   return {
