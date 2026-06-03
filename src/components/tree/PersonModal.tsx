@@ -8,6 +8,7 @@ import Image from 'next/image';
 
 type Props = {
   selectedPerson: Person | null;
+  people: Person[];
   setSelectedPerson: (person: Person | null) => void;
   onDelete: (id: string) => void;
   onUpdate: (person: Person) => void;
@@ -20,6 +21,8 @@ type EditForm = {
   deathYear: number | '';
   description: string;
   image: string;
+  parentId: string;
+  spouseId: string;
 };
 
 function createEditForm(person: Person): EditForm {
@@ -30,11 +33,14 @@ function createEditForm(person: Person): EditForm {
     deathYear: person.deathYear ?? '',
     description: person.description || '',
     image: person.image || '/placeholder.png',
+    parentId: person.parents?.[0] || '',
+    spouseId: person.spouseId || '',
   };
 }
 
 export default function PersonModal({
   selectedPerson,
+  people,
   setSelectedPerson,
   onDelete,
   onUpdate,
@@ -54,6 +60,15 @@ export default function PersonModal({
 
   const person = selectedPerson;
   const form = editForm ?? createEditForm(person);
+
+  const availableParents = people.filter((p) => p.id !== person.id);
+
+  const availableSpouses = people.filter((p) => {
+    if (p.id === person.id) return false;
+    if (p.id === person.spouseId) return true;
+
+    return !p.spouseId;
+  });
 
   function startEditing() {
     setEditForm(createEditForm(person));
@@ -106,6 +121,8 @@ export default function PersonModal({
       deathYear: currentForm.deathYear === '' ? null : currentForm.deathYear,
       description: currentForm.description,
       image: currentForm.image || '/placeholder.png',
+      parents: currentForm.parentId ? [currentForm.parentId] : [],
+      spouseId: currentForm.spouseId || null,
     };
 
     onUpdate(updatedPerson);
@@ -251,6 +268,42 @@ export default function PersonModal({
                   }
                 />
               </div>
+
+              <select
+                className="border rounded px-3 py-2 text-sm"
+                value={form.parentId}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...(prev ?? createEditForm(person)),
+                    parentId: e.target.value,
+                  }))
+                }
+              >
+                <option value="">No parent</option>
+                {availableParents.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.firstName} {p.lastName}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="border rounded px-3 py-2 text-sm"
+                value={form.spouseId}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...(prev ?? createEditForm(person)),
+                    spouseId: e.target.value,
+                  }))
+                }
+              >
+                <option value="">No spouse</option>
+                {availableSpouses.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.firstName} {p.lastName}
+                  </option>
+                ))}
+              </select>
 
               <textarea
                 className="border rounded px-3 py-2 text-sm"

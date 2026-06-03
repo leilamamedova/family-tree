@@ -1,5 +1,11 @@
 import './globals.css';
-import Providers from '@/components/provider/Providers';
+import ReactFlowProvider from '@/components/providers/ReactFlowProvider';
+import ApolloProvider from '@/components/providers/ApolloProvider';
+
+export const metadata = {
+  title: 'FamTree',
+  description: 'Family Tree Visualizer',
+};
 
 export default function RootLayout({
   children,
@@ -9,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <ApolloProvider>
+          <ReactFlowProvider>{children}</ReactFlowProvider>
+        </ApolloProvider>
       </body>
     </html>
   );

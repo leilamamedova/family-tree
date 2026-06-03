@@ -4,7 +4,7 @@ import ReactFlow, { Background, Controls, useReactFlow } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 import { useMemo, useState } from 'react';
-import { people as initialPeople } from '@/data/mockPeople';
+import { useMutation, useQuery } from '@apollo/client/react';
 import PersonNode from './PersonNode';
 import FamilyConnectorNode from './FamilyConnectorNode';
 import SearchBar from './SearchBar';
@@ -12,6 +12,12 @@ import { Person } from '@/types/person';
 import { buildTreeLayout } from '@/lib/buildTreeLayout';
 import PersonModal from './PersonModal';
 import AddPersonModal from './AddPersonModal';
+import {
+  CREATE_PERSON,
+  DELETE_PERSON,
+  GET_PERSONS,
+  UPDATE_PERSON,
+} from '@/graphql/personOperations';
 
 const nodeTypes = {
   person: PersonNode,
@@ -19,13 +25,22 @@ const nodeTypes = {
 };
 
 export default function TreeView() {
-  const [peopleState, setPeopleState] = useState<Person[]>(initialPeople);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [highlighted, setHighlighted] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addMode, setAddMode] = useState<'root' | 'child' | 'parent'>('root');
 
   const { setCenter } = useReactFlow();
+
+  const { data, loading, error, refetch } = useQuery(GET_PERSONS);
+
+  const [createPersonMutation] = useMutation(CREATE_PERSON);
+  const [updatePersonMutation] = useMutation(UPDATE_PERSON);
+  const [deletePersonMutation] = useMutation(DELETE_PERSON);
+
+  const peopleState = useMemo(() => {
+    return data?.persons || [];
+  }, [data]);
 
   const { nodes, edges } = useMemo(() => {
     const result = buildTreeLayout(peopleState);
@@ -77,58 +92,73 @@ export default function TreeView() {
     }
   }
 
-  function deletePerson(personId: string) {
-    setPeopleState((prev) =>
-      prev
-        .filter((p) => p.id !== personId)
-        .map((p) => ({
-          ...p,
-          parents: (p.parents || []).filter((id) => id !== personId),
-          spouseId: p.spouseId === personId ? null : p.spouseId,
-        })),
-    );
+  async function deletePerson(personId: string) {
+    await deletePersonMutation({
+      variables: {
+        id: personId,
+      },
+    });
 
     setSelectedPerson(null);
+    await refetch();
   }
 
-  function updatePerson(updatedPerson: Person) {
-    setPeopleState((prev) =>
-      prev.map((person) =>
-        person.id === updatedPerson.id ? updatedPerson : person,
-      ),
-    );
+  async function updatePerson(updatedPerson: Person) {
+    await updatePersonMutation({
+      variables: {
+        id: updatedPerson.id,
+        input: {
+          firstName: updatedPerson.firstName,
+          lastName: updatedPerson.lastName,
+          birthYear: updatedPerson.birthYear,
+          deathYear: updatedPerson.deathYear,
+          image: updatedPerson.image,
+          description: updatedPerson.description,
+          parents: updatedPerson.parents || [],
+          children: updatedPerson.children || [],
+          spouseId: updatedPerson.spouseId || null,
+        },
+      },
+    });
 
     setSelectedPerson(updatedPerson);
+    await refetch();
   }
 
-  function handleCreatePerson(person: Person) {
-    setPeopleState((prev) => {
-      const normalizedPerson: Person = { ...person };
-
-      if (normalizedPerson.parents?.length) {
-        const selectedParentId = normalizedPerson.parents[0];
-        const selectedParent = prev.find((p) => p.id === selectedParentId);
-
-        if (selectedParent?.spouseId) {
-          normalizedPerson.parents = [
-            selectedParent.id,
-            selectedParent.spouseId,
-          ];
-        }
-      }
-
-      let updated = [...prev, normalizedPerson];
-
-      if (normalizedPerson.spouseId) {
-        updated = updated.map((p) =>
-          p.id === normalizedPerson.spouseId
-            ? { ...p, spouseId: normalizedPerson.id }
-            : p,
-        );
-      }
-
-      return updated;
+  async function handleCreatePerson(person: Person) {
+    await createPersonMutation({
+      variables: {
+        input: {
+          firstName: person.firstName,
+          lastName: person.lastName,
+          birthYear: person.birthYear,
+          deathYear: person.deathYear,
+          image: person.image,
+          description: person.description,
+          parents: person.parents || [],
+          children: person.children || [],
+          spouseId: person.spouseId || null,
+        },
+      },
     });
+
+    await refetch();
+  }
+
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        Loading family tree...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center text-red-500">
+        Failed to load family tree.
+      </div>
+    );
   }
 
   return (
@@ -156,6 +186,7 @@ export default function TreeView() {
 
       <PersonModal
         selectedPerson={selectedPerson}
+        people={peopleState}
         setSelectedPerson={setSelectedPerson}
         onDelete={deletePerson}
         onUpdate={updatePerson}

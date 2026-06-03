@@ -41,6 +41,21 @@ export default function AddPersonModal({
 
   if (!isOpen) return null;
 
+  function resetForm() {
+    setFirstName('');
+    setLastName('');
+    setBirthYear('');
+    setDeathYear('');
+    setImageFile(null);
+    setDescription('');
+    setParentId('');
+    setSpouseId('');
+    setErrors({
+      firstName: false,
+      lastName: false,
+    });
+  }
+
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -64,8 +79,8 @@ export default function AddPersonModal({
       id: crypto.randomUUID(),
       firstName,
       lastName,
-      birthYear: birthYear || null,
-      deathYear: deathYear || null,
+      birthYear: birthYear === '' ? null : birthYear,
+      deathYear: deathYear === '' ? null : deathYear,
       image: imageFile || '/placeholder.png',
       description: description || '',
       parents: parentId ? [parentId] : [],
@@ -75,36 +90,12 @@ export default function AddPersonModal({
 
     onCreate(newPerson, mode);
 
-    setFirstName('');
-    setLastName('');
-    setBirthYear('');
-    setDeathYear('');
-    setImageFile(null);
-    setDescription('');
-    setParentId('');
-    setSpouseId('');
-    setErrors({
-      firstName: false,
-      lastName: false,
-    });
-
+    resetForm();
     onClose();
   }
 
   function handleClose() {
-    setFirstName('');
-    setLastName('');
-    setBirthYear('');
-    setDeathYear('');
-    setImageFile(null);
-    setDescription('');
-    setParentId('');
-    setSpouseId('');
-    setErrors({
-      firstName: false,
-      lastName: false,
-    });
-
+    resetForm();
     onClose();
   }
 
@@ -115,7 +106,6 @@ export default function AddPersonModal({
           Add Person
         </h2>
 
-        {/* IMAGE */}
         <div className="flex justify-center mt-4 text-black">
           <div
             onClick={() => fileInputRef.current?.click()}
@@ -142,7 +132,6 @@ export default function AddPersonModal({
           />
         </div>
 
-        {/* FORM */}
         <div className="mt-4 flex flex-col gap-2 text-gray-600">
           <input
             className={`border rounded px-3 py-2 text-sm ${
@@ -179,6 +168,32 @@ export default function AddPersonModal({
               }
             }}
           />
+
+          <div className="flex gap-2">
+            <input
+              className="border rounded px-3 py-2 text-sm w-1/2"
+              placeholder="Birth year"
+              type="number"
+              value={birthYear}
+              onChange={(e) =>
+                setBirthYear(
+                  e.target.value === '' ? '' : Number(e.target.value),
+                )
+              }
+            />
+
+            <input
+              className="border rounded px-3 py-2 text-sm w-1/2"
+              placeholder="Death year"
+              type="number"
+              value={deathYear}
+              onChange={(e) =>
+                setDeathYear(
+                  e.target.value === '' ? '' : Number(e.target.value),
+                )
+              }
+            />
+          </div>
 
           <select
             className="border rounded px-3 py-2 text-sm"
