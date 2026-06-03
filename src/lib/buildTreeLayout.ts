@@ -45,6 +45,10 @@ export function buildTreeLayout(people: Person[]) {
   const CONNECTOR_OFFSET_Y = 135;
   const CONNECTOR_SIZE = 8;
 
+  // PersonNode visual circle is 80px wide.
+  // React Flow position is top-left, but handles are visually centered.
+  const PERSON_HANDLE_CENTER_X = 40;
+
   function getCoupleKey(a: string, b: string) {
     return [a, b].sort().join('__');
   }
@@ -150,14 +154,16 @@ export function buildTreeLayout(people: Person[]) {
 
     const children = getCoupleChildren(parentAId, parentBId);
 
-    // IMPORTANT:
-    // If there are no children, do NOT create connector or child lines.
     if (children.length === 0) return;
 
     renderedCouples.add(childrenKey);
 
     const y = depth * LEVEL_HEIGHT;
-    const connectorCenterX = (leftX + rightX) / 2;
+
+    const leftHandleCenterX = leftX + PERSON_HANDLE_CENTER_X;
+    const rightHandleCenterX = rightX + PERSON_HANDLE_CENTER_X;
+
+    const connectorCenterX = (leftHandleCenterX + rightHandleCenterX) / 2;
     const connectorX = connectorCenterX - CONNECTOR_SIZE / 2;
     const connectorY = y + CONNECTOR_OFFSET_Y;
 
@@ -194,7 +200,7 @@ export function buildTreeLayout(people: Person[]) {
 
     children.forEach((child, index) => {
       const childWidth = childWidths[index];
-      const childX = currentX + childWidth / 2 - NODE_WIDTH / 2;
+      const childX = currentX + childWidth / 2 - PERSON_HANDLE_CENTER_X;
 
       edges.push({
         id: `${connectorId}-${child.id}`,

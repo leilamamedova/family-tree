@@ -5,6 +5,7 @@ import { Person } from '@/types/person';
 import Image from 'next/image';
 import DatePicker from 'react-datepicker';
 import PersonSelect from './PersonSelect';
+import { uploadImage } from '@/lib/uploadImage';
 
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -39,7 +40,9 @@ export default function AddPersonModal({
   const [deathDate, setDeathDate] = useState<Date | null>(null);
 
   const [description, setDescription] = useState('');
-  const [imageFile, setImageFile] = useState<string | null>(null);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [parentId, setParentId] = useState('');
   const [spouseId, setSpouseId] = useState('');
@@ -52,6 +55,7 @@ export default function AddPersonModal({
 
   const [birthDateError, setBirthDateError] = useState(false);
   const [deathDateError, setDeathDateError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -64,6 +68,7 @@ export default function AddPersonModal({
     setBirthDate(null);
     setDeathDate(null);
     setImageFile(null);
+    setImagePreview(null);
     setDescription('');
     setParentId('');
     setSpouseId('');
@@ -76,17 +81,18 @@ export default function AddPersonModal({
 
     setBirthDateError(false);
     setDeathDateError(false);
+    setIsSubmitting(false);
   }
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const url = URL.createObjectURL(file);
-    setImageFile(url);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const newErrors = {
       firstName: !firstName.trim(),
       lastName: !lastName.trim(),
@@ -102,29 +108,39 @@ export default function AddPersonModal({
 
     if (hasErrors) return;
 
-    const newPerson: Person = {
-      id: crypto.randomUUID(),
+    setIsSubmitting(true);
 
-      firstName,
-      lastName,
-      patronymic,
+    try {
+      const uploadedImageUrl = imageFile
+        ? await uploadImage(imageFile)
+        : '/placeholder.png';
 
-      birthDate: birthDate ? birthDate.toISOString() : null,
-      deathDate: deathDate ? deathDate.toISOString() : null,
+      const newPerson: Person = {
+        id: crypto.randomUUID(),
 
-      image: imageFile || '/placeholder.png',
-      description: description || '',
+        firstName,
+        lastName,
+        patronymic,
 
-      parents: parentId ? [parentId] : [],
-      children: [],
+        birthDate: birthDate ? birthDate.toISOString() : null,
+        deathDate: deathDate ? deathDate.toISOString() : null,
 
-      spouseId: spouseId || null,
-    };
+        image: uploadedImageUrl,
+        description: description || '',
 
-    onCreate(newPerson, mode);
+        parents: parentId ? [parentId] : [],
+        children: [],
 
-    resetForm();
-    onClose();
+        spouseId: spouseId || null,
+      };
+
+      onCreate(newPerson, mode);
+
+      resetForm();
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleClose() {
@@ -144,9 +160,9 @@ export default function AddPersonModal({
             onClick={() => fileInputRef.current?.click()}
             className="w-24 h-24 rounded-full border-2 border-black border-dashed flex items-center justify-center overflow-hidden cursor-pointer hover:border-gray-600"
           >
-            {imageFile ? (
+            {imagePreview ? (
               <Image
-                src={imageFile}
+                src={imagePreview}
                 alt="avatar"
                 width={96}
                 height={96}
@@ -160,6 +176,7 @@ export default function AddPersonModal({
           <input
             ref={fileInputRef}
             type="file"
+            accept="image/*"
             hidden
             onChange={handleImageUpload}
           />
@@ -176,10 +193,7 @@ export default function AddPersonModal({
               setFirstName(e.target.value);
 
               if (errors.firstName) {
-                setErrors((prev) => ({
-                  ...prev,
-                  firstName: false,
-                }));
+                setErrors((prev) => ({ ...prev, firstName: false }));
               }
             }}
           />
@@ -194,10 +208,7 @@ export default function AddPersonModal({
               setLastName(e.target.value);
 
               if (errors.lastName) {
-                setErrors((prev) => ({
-                  ...prev,
-                  lastName: false,
-                }));
+                setErrors((prev) => ({ ...prev, lastName: false }));
               }
             }}
           />
@@ -251,9 +262,7 @@ export default function AddPersonModal({
 
                 const value = (e.target as HTMLInputElement).value;
 
-                if (!value) {
-                  setBirthDateError(false);
-                }
+                if (!value) setBirthDateError(false);
               }}
               dateFormat="dd.MM.yyyy"
               placeholderText="Doğum tarixi"
@@ -290,9 +299,7 @@ export default function AddPersonModal({
 
                 const value = (e.target as HTMLInputElement).value;
 
-                if (!value) {
-                  setDeathDateError(false);
-                }
+                if (!value) setDeathDateError(false);
               }}
               dateFormat="dd.MM.yyyy"
               placeholderText="Ölüm tarixi"
@@ -335,15 +342,17 @@ export default function AddPersonModal({
           <button
             onClick={handleClose}
             className="text-black border px-3 py-1 rounded"
+            disabled={isSubmitting}
           >
             Ləğv et
           </button>
 
           <button
             onClick={handleSubmit}
-            className="bg-black text-white px-3 py-1 rounded"
+            disabled={isSubmitting}
+            className="bg-black text-white px-3 py-1 rounded disabled:opacity-50"
           >
-            Yadda saxla
+            {isSubmitting ? 'Yüklənir...' : 'Yadda saxla'}
           </button>
         </div>
       </div>

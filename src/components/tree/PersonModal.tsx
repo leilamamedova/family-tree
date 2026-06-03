@@ -8,6 +8,7 @@ import Image from 'next/image';
 import DatePicker from 'react-datepicker';
 import { format } from 'date-fns';
 import PersonSelect from './PersonSelect';
+import { uploadImage } from '@/lib/uploadImage';
 
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -61,6 +62,23 @@ function getFullName(person: Person) {
     .join(' ');
 }
 
+function getParentsText(person: Person, people: Person[]) {
+  if (!person.parents?.length) {
+    return 'Qeyd olunmayıb';
+  }
+
+  return person.parents
+    .map((parentId) => {
+      const parent = people.find((p) => p.id === parentId);
+
+      if (!parent) return null;
+
+      return getFullName(parent);
+    })
+    .filter(Boolean)
+    .join(', ');
+}
+
 function createEditForm(person: Person): EditForm {
   return {
     firstName: person.firstName,
@@ -87,6 +105,8 @@ export default function PersonModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isImageLoading, setIsImageLoading] = useState(false);
 
   const [errors, setErrors] = useState({
     firstName: false,
@@ -96,6 +116,7 @@ export default function PersonModal({
 
   const [birthDateError, setBirthDateError] = useState(false);
   const [deathDateError, setDeathDateError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!selectedPerson) return null;
 
@@ -113,11 +134,15 @@ export default function PersonModal({
 
   function startEditing() {
     setEditForm(createEditForm(person));
+    setImageFile(null);
+    setIsImageLoading(false);
+
     setErrors({
       firstName: false,
       lastName: false,
       invalidDates: false,
     });
+
     setBirthDateError(false);
     setDeathDateError(false);
     setIsEditing(true);
@@ -125,11 +150,15 @@ export default function PersonModal({
 
   function cancelEditing() {
     setEditForm(null);
+    setImageFile(null);
+    setIsImageLoading(false);
+
     setErrors({
       firstName: false,
       lastName: false,
       invalidDates: false,
     });
+
     setBirthDateError(false);
     setDeathDateError(false);
     setIsEditing(false);
@@ -139,15 +168,18 @@ export default function PersonModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const url = URL.createObjectURL(file);
+    setImageFile(file);
+    setIsImageLoading(true);
+
+    const previewUrl = URL.createObjectURL(file);
 
     setEditForm((prev) => ({
       ...(prev ?? createEditForm(person)),
-      image: url,
+      image: previewUrl,
     }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     const currentForm = editForm ?? createEditForm(person);
 
     const newErrors = {
@@ -168,43 +200,61 @@ export default function PersonModal({
 
     if (hasErrors) return;
 
-    const updatedPerson: Person = {
-      ...person,
-      firstName: currentForm.firstName,
-      lastName: currentForm.lastName,
-      patronymic: currentForm.patronymic,
-      birthDate: currentForm.birthDate
-        ? currentForm.birthDate.toISOString()
-        : null,
-      deathDate: currentForm.deathDate
-        ? currentForm.deathDate.toISOString()
-        : null,
-      description: currentForm.description,
-      image: currentForm.image || '/placeholder.png',
-      parents: currentForm.parentId ? [currentForm.parentId] : [],
-      spouseId: currentForm.spouseId || null,
-    };
+    setIsSubmitting(true);
 
-    onUpdate(updatedPerson);
+    try {
+      const finalImageUrl = imageFile
+        ? await uploadImage(imageFile, person.image)
+        : currentForm.image || '/placeholder.png';
 
-    setEditForm(null);
-    setErrors({
-      firstName: false,
-      lastName: false,
-      invalidDates: false,
-    });
-    setBirthDateError(false);
-    setDeathDateError(false);
-    setIsEditing(false);
+      const updatedPerson: Person = {
+        ...person,
+        firstName: currentForm.firstName,
+        lastName: currentForm.lastName,
+        patronymic: currentForm.patronymic,
+        birthDate: currentForm.birthDate
+          ? currentForm.birthDate.toISOString()
+          : null,
+        deathDate: currentForm.deathDate
+          ? currentForm.deathDate.toISOString()
+          : null,
+        description: currentForm.description,
+        image: finalImageUrl,
+        parents: currentForm.parentId ? [currentForm.parentId] : [],
+        spouseId: currentForm.spouseId || null,
+      };
+
+      await onUpdate(updatedPerson);
+
+      setEditForm(null);
+      setImageFile(null);
+      setIsImageLoading(false);
+
+      setErrors({
+        firstName: false,
+        lastName: false,
+        invalidDates: false,
+      });
+
+      setBirthDateError(false);
+      setDeathDateError(false);
+      setIsEditing(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleClose() {
     setEditForm(null);
+    setImageFile(null);
+    setIsImageLoading(false);
+
     setErrors({
       firstName: false,
       lastName: false,
       invalidDates: false,
     });
+
     setBirthDateError(false);
     setDeathDateError(false);
     setIsEditing(false);
@@ -213,7 +263,7 @@ export default function PersonModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="relative bg-white p-6 rounded-xl w-[320px] shadow-xl">
+      <div className="relative bg-white p-6 rounded-xl w-[480px] shadow-xl">
         {!isEditing && (
           <div className="absolute top-5 right-5 flex items-center gap-3">
             <button
@@ -241,6 +291,12 @@ export default function PersonModal({
               person.deathDate ? 'grayscale opacity-70' : ''
             } ${isEditing ? 'cursor-pointer hover:border-gray-600' : ''}`}
           >
+            {isImageLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 text-xs text-gray-600">
+                Yüklənir...
+              </div>
+            )}
+
             <Image
               src={form.image || person.image || '/placeholder.png'}
               alt={getFullName(person)}
@@ -248,6 +304,8 @@ export default function PersonModal({
               sizes="96px"
               loading="eager"
               className="object-cover"
+              onLoad={() => setIsImageLoading(false)}
+              onError={() => setIsImageLoading(false)}
             />
           </div>
 
@@ -276,10 +334,7 @@ export default function PersonModal({
                   }));
 
                   if (errors.firstName) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      firstName: false,
-                    }));
+                    setErrors((prev) => ({ ...prev, firstName: false }));
                   }
                 }}
               />
@@ -297,10 +352,7 @@ export default function PersonModal({
                   }));
 
                   if (errors.lastName) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      lastName: false,
-                    }));
+                    setErrors((prev) => ({ ...prev, lastName: false }));
                   }
                 }}
               />
@@ -363,9 +415,7 @@ export default function PersonModal({
 
                     const value = (e.target as HTMLInputElement).value;
 
-                    if (!value) {
-                      setBirthDateError(false);
-                    }
+                    if (!value) setBirthDateError(false);
                   }}
                   dateFormat="dd.MM.yyyy"
                   placeholderText="Doğum tarixi"
@@ -406,9 +456,7 @@ export default function PersonModal({
 
                     const value = (e.target as HTMLInputElement).value;
 
-                    if (!value) {
-                      setDeathDateError(false);
-                    }
+                    if (!value) setDeathDateError(false);
                   }}
                   dateFormat="dd.MM.yyyy"
                   placeholderText="Ölüm tarixi"
@@ -450,7 +498,7 @@ export default function PersonModal({
               />
 
               <textarea
-                className="border rounded px-3 py-2 text-sm"
+                className="border rounded px-3 py-2 text-sm min-h-[120px] max-h-[160px] resize-y"
                 placeholder="Təsvir"
                 value={form.description}
                 onChange={(e) =>
@@ -466,15 +514,17 @@ export default function PersonModal({
               <button
                 onClick={cancelEditing}
                 className="text-black border px-3 py-1 rounded"
+                disabled={isSubmitting}
               >
                 Ləğv et
               </button>
 
               <button
                 onClick={handleSave}
-                className="bg-black text-white px-3 py-1 rounded"
+                disabled={isSubmitting}
+                className="bg-black text-white px-3 py-1 rounded disabled:opacity-50"
               >
-                Yadda saxla
+                {isSubmitting ? 'Yüklənir...' : 'Yadda saxla'}
               </button>
             </div>
           </>
@@ -488,9 +538,18 @@ export default function PersonModal({
               {formatDate(person.birthDate)} - {formatDate(person.deathDate)}
             </p>
 
-            <p className="mt-3 text-sm text-center text-gray-600">
-              {person.description}
-            </p>
+            <div className="mt-3 text-sm text-center text-gray-600">
+              <div>
+                <span className="font-semibold">Valideynlər:</span>{' '}
+                {getParentsText(person, people)}
+              </div>
+
+              {person.description && (
+                <div className="mt-3 max-h-48 overflow-y-auto pr-2">
+                  {person.description}
+                </div>
+              )}
+            </div>
 
             <div className="flex justify-end gap-2 mt-5">
               <button
