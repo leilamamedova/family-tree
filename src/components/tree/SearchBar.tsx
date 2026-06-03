@@ -27,11 +27,15 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
     const q = value.toLowerCase();
 
     const filtered = people.filter((p) => {
-      const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+      const patronymic = p.patronymic || '';
+
+      const fullName =
+        `${p.firstName} ${p.lastName} ${patronymic}`.toLowerCase();
 
       return (
         p.firstName.toLowerCase().includes(q) ||
         p.lastName.toLowerCase().includes(q) ||
+        patronymic.toLowerCase().includes(q) ||
         fullName.includes(q)
       );
     });
@@ -44,7 +48,9 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
   };
 
   const selectPerson = (person: Person) => {
-    setQuery(`${person.firstName} ${person.lastName}`);
+    const patronymic = person.patronymic ? ` ${person.patronymic}` : '';
+
+    setQuery(`${person.firstName} ${person.lastName} ${patronymic}`);
     setResults([]);
     onSelect(person);
   };
@@ -58,15 +64,13 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
   return (
     <div className="absolute top-4 left-4 z-20">
       <div className="relative w-64">
-        {/* INPUT */}
         <input
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Search person..."
+          placeholder="Axtarış..."
           className="px-4 py-2 w-full rounded-full border shadow-sm outline-none bg-transparent pr-10"
         />
 
-        {/* CLEAR BUTTON */}
         {query && (
           <button
             onClick={clearInput}
@@ -76,26 +80,31 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
           </button>
         )}
 
-        {/* DROPDOWN */}
         {results.length > 0 && (
           <div className="absolute mt-2 w-full bg-transparent border rounded-lg shadow-lg max-h-60 overflow-auto">
-            {results.map((person) => (
-              <div
-                key={person.id}
-                onClick={() => selectPerson(person)}
-                className={clsx(
-                  'px-3 py-2 cursor-pointer text-sm hover:bg-white/10',
-                )}
-              >
-                <div className="font-medium">
-                  {person.firstName} {person.lastName}
-                </div>
+            {results.map((person) => {
+              const patronymic = person.patronymic
+                ? ` ${person.patronymic}`
+                : '';
 
-                <div className="text-xs text-gray-500">
-                  {person.birthYear} - {person.deathYear || ''}
+              return (
+                <div
+                  key={person.id}
+                  onClick={() => selectPerson(person)}
+                  className={clsx(
+                    'px-3 py-2 cursor-pointer text-sm hover:bg-white/10',
+                  )}
+                >
+                  <div className="font-medium">
+                    {person.firstName} {person.lastName} {patronymic}
+                  </div>
+
+                  <div className="text-xs text-gray-500">
+                    {person.birthYear} - {person.deathYear || ''}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

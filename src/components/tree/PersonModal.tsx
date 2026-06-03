@@ -17,6 +17,7 @@ type Props = {
 type EditForm = {
   firstName: string;
   lastName: string;
+  patronymic: string;
   birthYear: number | '';
   deathYear: number | '';
   description: string;
@@ -29,6 +30,7 @@ function createEditForm(person: Person): EditForm {
   return {
     firstName: person.firstName,
     lastName: person.lastName,
+    patronymic: person.patronymic || '',
     birthYear: person.birthYear ?? '',
     deathYear: person.deathYear ?? '',
     description: person.description || '',
@@ -117,6 +119,7 @@ export default function PersonModal({
       ...person,
       firstName: currentForm.firstName,
       lastName: currentForm.lastName,
+      patronymic: currentForm.patronymic,
       birthYear: currentForm.birthYear === '' ? null : currentForm.birthYear,
       deathYear: currentForm.deathYear === '' ? null : currentForm.deathYear,
       description: currentForm.description,
@@ -177,7 +180,7 @@ export default function PersonModal({
           >
             <Image
               src={form.image || person.image || '/placeholder.png'}
-              alt={`${person.firstName} ${person.lastName}`}
+              alt={`${person.firstName} ${person.lastName} ${person.patronymic}`}
               fill
               sizes="96px"
               loading="eager"
@@ -201,7 +204,7 @@ export default function PersonModal({
                 className={`border rounded px-3 py-2 text-sm ${
                   errors.firstName ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="First name"
+                placeholder="Adı"
                 value={form.firstName}
                 onChange={(e) => {
                   setEditForm((prev) => ({
@@ -222,7 +225,7 @@ export default function PersonModal({
                 className={`border rounded px-3 py-2 text-sm ${
                   errors.lastName ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="Last name"
+                placeholder="Soyad"
                 value={form.lastName}
                 onChange={(e) => {
                   setEditForm((prev) => ({
@@ -239,10 +242,22 @@ export default function PersonModal({
                 }}
               />
 
+              <input
+                className="border rounded px-3 py-2 text-sm border-gray-300"
+                placeholder="Ata adı"
+                value={form.patronymic}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...(prev ?? createEditForm(person)),
+                    patronymic: e.target.value,
+                  }))
+                }
+              />
+
               <div className="flex gap-2">
                 <input
                   className="border rounded px-3 py-2 text-sm w-1/2"
-                  placeholder="Birth year"
+                  placeholder="Doğum tarixi"
                   type="number"
                   value={form.birthYear}
                   onChange={(e) =>
@@ -256,7 +271,7 @@ export default function PersonModal({
 
                 <input
                   className="border rounded px-3 py-2 text-sm w-1/2"
-                  placeholder="Death year"
+                  placeholder="Ölüm tarixi"
                   type="number"
                   value={form.deathYear}
                   onChange={(e) =>
@@ -279,10 +294,10 @@ export default function PersonModal({
                   }))
                 }
               >
-                <option value="">No parent</option>
+                <option value="">Valideyn qeyd olunmayıb</option>
                 {availableParents.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.firstName} {p.lastName}
+                    {p.firstName} {p.lastName} {p.patronymic}
                   </option>
                 ))}
               </select>
@@ -297,17 +312,17 @@ export default function PersonModal({
                   }))
                 }
               >
-                <option value="">No spouse</option>
+                <option value="">Həyat yoldaşı qeyd olunmayıb</option>
                 {availableSpouses.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.firstName} {p.lastName}
+                    {p.firstName} {p.lastName} {p.patronymic}
                   </option>
                 ))}
               </select>
 
               <textarea
                 className="border rounded px-3 py-2 text-sm"
-                placeholder="Description"
+                placeholder="Təsvir"
                 value={form.description}
                 onChange={(e) =>
                   setEditForm((prev) => ({
@@ -323,21 +338,21 @@ export default function PersonModal({
                 onClick={cancelEditing}
                 className="text-black border px-3 py-1 rounded"
               >
-                Cancel
+                Ləğv et
               </button>
 
               <button
                 onClick={handleSave}
                 className="bg-black text-white px-3 py-1 rounded"
               >
-                Save
+                Yadda saxla
               </button>
             </div>
           </>
         ) : (
           <>
             <h1 className="mt-3 font-bold text-center text-gray-600">
-              {person.firstName} {person.lastName}
+              {person.firstName} {person.lastName} {person.patronymic}
             </h1>
 
             <p className="text-center text-sm text-gray-500">
@@ -353,7 +368,7 @@ export default function PersonModal({
                 onClick={handleClose}
                 className="text-black border px-3 py-1 rounded"
               >
-                Close
+                Bağla
               </button>
             </div>
           </>
@@ -363,9 +378,9 @@ export default function PersonModal({
       <ConfirmModal
         isOpen={showDeleteConfirm}
         title="Delete person"
-        message={`Are you sure you want to delete ${person.firstName} ${person.lastName}?`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        message={`${person.firstName} ${person.lastName} ${person.patronymic} silmək istədiyinizə əminsiniz?`}
+        confirmText="Sil"
+        cancelText="Ləğv et"
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={() => {
           onDelete(person.id);

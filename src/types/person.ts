@@ -3,6 +3,7 @@ export type Person = {
 
   firstName: string;
   lastName: string;
+  patronymic?: string;
 
   birthYear: number | null;
   deathYear?: number | null;

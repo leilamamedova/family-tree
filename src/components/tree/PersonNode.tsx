@@ -52,7 +52,7 @@ export default function PersonNode({ data }: Props) {
       >
         <Image
           src={person.image || '/placeholder.png'}
-          alt={`${person.firstName} ${person.lastName}`}
+          alt={`${person.firstName} ${person.lastName} ${person.patronymic}`}
           fill
           sizes="80px"
           className="object-cover"
@@ -62,6 +62,7 @@ export default function PersonNode({ data }: Props) {
       <div className="text-center mt-2 text-xs font-medium">
         <div>{person.firstName}</div>
         <div>{person.lastName}</div>
+        <div>{person.patronymic}</div>
       </div>
 
       <div className="text-[10px] text-gray-500">

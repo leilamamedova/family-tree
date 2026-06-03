@@ -4,6 +4,7 @@ import PersonModel from '@/models/PersonModel';
 type CreatePersonInput = {
   firstName: string;
   lastName: string;
+  patronymic?: string;
   birthYear?: number | null;
   deathYear?: number | null;
   image?: string;
@@ -22,6 +23,7 @@ type MongoPerson = {
   id?: string;
   firstName: string;
   lastName: string;
+  patronymic?: string;
   birthYear?: number | null;
   deathYear?: number | null;
   image?: string;
@@ -36,6 +38,7 @@ function normalizePerson(person: MongoPerson) {
     id: person._id.toString(),
     firstName: person.firstName,
     lastName: person.lastName,
+    patronymic: person.patronymic || '',
     birthYear: person.birthYear ?? null,
     deathYear: person.deathYear ?? null,
     image: person.image || '/placeholder.png',
@@ -100,7 +103,7 @@ export const resolvers = {
       const regex = new RegExp(args.query, 'i');
 
       const persons = await PersonModel.find({
-        $or: [{ firstName: regex }, { lastName: regex }],
+        $or: [{ firstName: regex }, { lastName: regex }, { patronymic: regex }],
       })
         .sort({ firstName: 1 })
         .lean();
@@ -120,6 +123,7 @@ export const resolvers = {
       const created = await PersonModel.create({
         firstName: args.input.firstName,
         lastName: args.input.lastName,
+        patronymic: args.input.patronymic || '',
         birthYear: args.input.birthYear ?? null,
         deathYear: args.input.deathYear ?? null,
         image: args.input.image || '/placeholder.png',

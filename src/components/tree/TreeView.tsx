@@ -110,6 +110,7 @@ export default function TreeView() {
         input: {
           firstName: updatedPerson.firstName,
           lastName: updatedPerson.lastName,
+          patronymic: updatedPerson.patronymic || '',
           birthYear: updatedPerson.birthYear,
           deathYear: updatedPerson.deathYear,
           image: updatedPerson.image,
@@ -131,6 +132,7 @@ export default function TreeView() {
         input: {
           firstName: person.firstName,
           lastName: person.lastName,
+          patronymic: person.patronymic || '',
           birthYear: person.birthYear,
           deathYear: person.deathYear,
           image: person.image,
@@ -176,7 +178,7 @@ export default function TreeView() {
         }}
         className="absolute top-4 right-4 z-20 bg-black text-white px-4 py-2 rounded-full border border-transparent hover:border-blue-500"
       >
-        + Add Person
+        + Əlavə et
       </button>
 
       <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>

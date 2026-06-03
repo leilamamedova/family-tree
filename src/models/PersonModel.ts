@@ -14,6 +14,12 @@ const PersonSchema = new Schema(
       trim: true,
     },
 
+    patronymic: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+
     birthYear: {
       type: Number,
       default: null,

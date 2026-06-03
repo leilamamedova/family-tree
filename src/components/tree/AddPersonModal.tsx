@@ -25,6 +25,7 @@ export default function AddPersonModal({
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [patronymic, setPatronymic] = useState('');
   const [birthYear, setBirthYear] = useState<number | ''>('');
   const [deathYear, setDeathYear] = useState<number | ''>('');
   const [description, setDescription] = useState('');
@@ -44,6 +45,7 @@ export default function AddPersonModal({
   function resetForm() {
     setFirstName('');
     setLastName('');
+    setPatronymic('');
     setBirthYear('');
     setDeathYear('');
     setImageFile(null);
@@ -79,6 +81,7 @@ export default function AddPersonModal({
       id: crypto.randomUUID(),
       firstName,
       lastName,
+      patronymic,
       birthYear: birthYear === '' ? null : birthYear,
       deathYear: deathYear === '' ? null : deathYear,
       image: imageFile || '/placeholder.png',
@@ -103,7 +106,7 @@ export default function AddPersonModal({
     <div className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center">
       <div className="bg-white w-[380px] rounded-xl p-6 shadow-xl">
         <h2 className="text-lg font-semibold text-center text-gray-800">
-          Add Person
+          Əlavə et
         </h2>
 
         <div className="flex justify-center mt-4 text-black">
@@ -120,7 +123,7 @@ export default function AddPersonModal({
                 className="object-cover w-full h-full"
               />
             ) : (
-              <span className="text-xs">Upload</span>
+              <span className="text-xs">Yüklə</span>
             )}
           </div>
 
@@ -137,7 +140,7 @@ export default function AddPersonModal({
             className={`border rounded px-3 py-2 text-sm ${
               errors.firstName ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="First name"
+            placeholder="Ad"
             value={firstName}
             onChange={(e) => {
               setFirstName(e.target.value);
@@ -155,7 +158,7 @@ export default function AddPersonModal({
             className={`border rounded px-3 py-2 text-sm ${
               errors.lastName ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="Last name"
+            placeholder="Soyad"
             value={lastName}
             onChange={(e) => {
               setLastName(e.target.value);
@@ -169,10 +172,17 @@ export default function AddPersonModal({
             }}
           />
 
+          <input
+            className="border rounded px-3 py-2 text-sm border-gray-300"
+            placeholder="Ata adı"
+            value={patronymic}
+            onChange={(e) => setPatronymic(e.target.value)}
+          />
+
           <div className="flex gap-2">
             <input
               className="border rounded px-3 py-2 text-sm w-1/2"
-              placeholder="Birth year"
+              placeholder="Doğum tarixi"
               type="number"
               value={birthYear}
               onChange={(e) =>
@@ -184,7 +194,7 @@ export default function AddPersonModal({
 
             <input
               className="border rounded px-3 py-2 text-sm w-1/2"
-              placeholder="Death year"
+              placeholder="Ölüm tarixi"
               type="number"
               value={deathYear}
               onChange={(e) =>
@@ -200,10 +210,10 @@ export default function AddPersonModal({
             value={parentId}
             onChange={(e) => setParentId(e.target.value)}
           >
-            <option value="">No parent</option>
+            <option value="">Valideyn qeyd olunmayıb</option>
             {people.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.firstName} {p.lastName}
+                {p.firstName} {p.lastName} {p.patronymic}
               </option>
             ))}
           </select>
@@ -213,19 +223,19 @@ export default function AddPersonModal({
             value={spouseId}
             onChange={(e) => setSpouseId(e.target.value)}
           >
-            <option value="">No spouse</option>
+            <option value="">Həyat yoldaşı qeyd olunmayıb</option>
             {people
               .filter((p) => !p.spouseId)
               .map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.firstName} {p.lastName}
+                  {p.firstName} {p.lastName} {p.patronymic}
                 </option>
               ))}
           </select>
 
           <textarea
             className="border rounded px-3 py-2 text-sm"
-            placeholder="Description"
+            placeholder="Təsvir"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
@@ -236,14 +246,14 @@ export default function AddPersonModal({
             onClick={handleClose}
             className="text-black border px-3 py-1 rounded"
           >
-            Cancel
+            Ləğv et
           </button>
 
           <button
             onClick={handleSubmit}
             className="bg-black text-white px-3 py-1 rounded"
           >
-            Create
+            Yadda saxla
           </button>
         </div>
       </div>

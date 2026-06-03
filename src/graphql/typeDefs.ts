@@ -4,6 +4,7 @@ export const typeDefs = `#graphql
 
     firstName: String!
     lastName: String!
+    patronymic: String
 
     birthYear: Int
     deathYear: Int
@@ -20,6 +21,7 @@ export const typeDefs = `#graphql
   input CreatePersonInput {
     firstName: String!
     lastName: String!
+    patronymic: String
 
     birthYear: Int
     deathYear: Int
@@ -36,6 +38,7 @@ export const typeDefs = `#graphql
   input UpdatePersonInput {
     firstName: String
     lastName: String
+    patronymic: String
 
     birthYear: Int
     deathYear: Int
