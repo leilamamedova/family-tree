@@ -59,6 +59,7 @@ export default function PersonNode({ data }: Props) {
           fill
           sizes="80px"
           className="object-cover"
+          loading="eager"
         />
       </div>
 

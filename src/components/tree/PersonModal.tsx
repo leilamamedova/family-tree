@@ -701,6 +701,7 @@ export default function PersonModal({
               width={900}
               height={900}
               className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+              loading="eager"
             />
           </div>
         </div>
