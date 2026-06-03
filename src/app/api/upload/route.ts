@@ -45,3 +45,24 @@ export async function POST(request: Request) {
     url: `/uploads/${fileName}`,
   });
 }
+
+export async function DELETE(request: Request) {
+  const { imageUrl } = await request.json();
+
+  if (
+    typeof imageUrl !== 'string' ||
+    !imageUrl ||
+    imageUrl === '/placeholder.png' ||
+    !isSafeUploadPath(imageUrl)
+  ) {
+    return NextResponse.json({ error: 'Invalid image url' }, { status: 400 });
+  }
+
+  const filePath = path.join(process.cwd(), 'public', imageUrl);
+
+  try {
+    await unlink(filePath);
+  } catch {}
+
+  return NextResponse.json({ success: true });
+}

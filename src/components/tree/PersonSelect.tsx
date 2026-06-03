@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Person } from '@/types/person';
 import clsx from 'clsx';
 
@@ -25,6 +25,8 @@ export default function PersonSelect({
   emptyLabel,
   onChange,
 }: Props) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -42,17 +44,42 @@ export default function PersonSelect({
     });
   }, [people, query]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setQuery('');
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  function openSelect() {
+    setIsOpen(true);
+    setQuery('');
+  }
+
   return (
-    <div className="relative">
+    <div ref={wrapperRef} className="relative">
       <input
         value={
-          isOpen ? query : selectedPerson ? getFullName(selectedPerson) : ''
+          isOpen && query
+            ? query
+            : selectedPerson
+              ? getFullName(selectedPerson)
+              : ''
         }
         placeholder={placeholder}
-        onFocus={() => {
-          setIsOpen(true);
-          setQuery('');
-        }}
+        onFocus={openSelect}
+        onClick={openSelect}
         onChange={(e) => {
           setQuery(e.target.value);
           setIsOpen(true);

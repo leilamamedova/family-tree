@@ -39,10 +39,10 @@ export function buildTreeLayout(people: Person[]) {
   const renderedCouples = new Set<string>();
   const connectorNodes = new Set<string>();
 
-  const LEVEL_HEIGHT = 190;
+  const LEVEL_HEIGHT = 260;
   const NODE_WIDTH = 180;
   const SPOUSE_GAP = 160;
-  const CONNECTOR_OFFSET_Y = 135;
+  const CONNECTOR_OFFSET_Y = 165;
   const CONNECTOR_SIZE = 8;
 
   // PersonNode visual circle is 80px wide.

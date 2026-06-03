@@ -9,6 +9,7 @@ import DatePicker from 'react-datepicker';
 import { format, isValid, parse } from 'date-fns';
 import PersonSelect from './PersonSelect';
 import { uploadImage } from '@/lib/uploadImage';
+import { deleteImage } from '@/lib/deleteImage';
 
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -105,6 +106,24 @@ function getParentsText(person: Person, people: Person[]) {
     .join(', ');
 }
 
+function getSiblingsText(person: Person, people: Person[]) {
+  if (!person.parents?.length) {
+    return 'Qeyd olunmayıb';
+  }
+
+  const siblings = people.filter((p) => {
+    if (p.id === person.id) return false;
+
+    return p.parents?.some((parentId) => person.parents.includes(parentId));
+  });
+
+  if (!siblings.length) {
+    return 'Qeyd olunmayıb';
+  }
+
+  return siblings.map(getFullName).join(', ');
+}
+
 function createEditForm(person: Person): EditForm {
   return {
     firstName: person.firstName,
@@ -135,6 +154,8 @@ export default function PersonModal({
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isImageLoading, setIsImageLoading] = useState(false);
+  const [deletedImageUrl, setDeletedImageUrl] = useState<string | null>(null);
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 
   const [errors, setErrors] = useState({
     firstName: false,
@@ -174,6 +195,7 @@ export default function PersonModal({
     setBirthDateError(false);
     setDeathDateError(false);
     setIsEditing(true);
+    setDeletedImageUrl(null);
   }
 
   function cancelEditing() {
@@ -190,11 +212,16 @@ export default function PersonModal({
     setBirthDateError(false);
     setDeathDateError(false);
     setIsEditing(false);
+    setDeletedImageUrl(null);
   }
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (imageFile && form.image.startsWith('blob:')) {
+      URL.revokeObjectURL(form.image);
+    }
 
     setImageFile(file);
     setIsImageLoading(true);
@@ -205,6 +232,32 @@ export default function PersonModal({
       ...(prev ?? createEditForm(person)),
       image: previewUrl,
     }));
+  }
+
+  function handleDeleteImage() {
+    const currentForm = editForm ?? createEditForm(person);
+    const currentImage =
+      currentForm.image || person.image || '/placeholder.png';
+
+    if (!currentImage || currentImage === '/placeholder.png') return;
+
+    if (currentImage.startsWith('blob:')) {
+      URL.revokeObjectURL(currentImage);
+    } else if (currentImage.startsWith('/uploads/')) {
+      setDeletedImageUrl(currentImage);
+    }
+
+    setImageFile(null);
+    setIsImageLoading(false);
+
+    setEditForm((prev) => ({
+      ...(prev ?? createEditForm(person)),
+      image: '/placeholder.png',
+    }));
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   }
 
   async function handleSave() {
@@ -242,9 +295,14 @@ export default function PersonModal({
     setIsSubmitting(true);
 
     try {
-      const finalImageUrl = imageFile
-        ? await uploadImage(imageFile, person.image)
-        : currentForm.image || '/placeholder.png';
+      let finalImageUrl = currentForm.image || '/placeholder.png';
+
+      if (imageFile) {
+        finalImageUrl = await uploadImage(imageFile, person.image);
+      } else if (deletedImageUrl) {
+        await deleteImage(deletedImageUrl);
+        finalImageUrl = '/placeholder.png';
+      }
 
       const updatedPerson: Person = {
         ...person,
@@ -298,6 +356,7 @@ export default function PersonModal({
     setDeathDateError(false);
     setIsEditing(false);
     setSelectedPerson(null);
+    setDeletedImageUrl(null);
   }
 
   return (
@@ -321,7 +380,13 @@ export default function PersonModal({
           </div>
         )}
 
-        <div className="flex justify-center mt-8">
+        {isEditing && (
+          <h2 className="text-lg font-semibold text-center text-gray-800">
+            Redakt elə
+          </h2>
+        )}
+
+        <div className="flex flex-col items-center mt-8">
           <div
             onClick={() => {
               if (isEditing) fileInputRef.current?.click();
@@ -342,11 +407,32 @@ export default function PersonModal({
               fill
               sizes="96px"
               loading="eager"
-              className="object-cover"
+              className={`object-cover ${isEditing || form.image !== '/placeholder.png' ? 'cursor-pointer hover:border-gray-600' : ''}`}
               onLoad={() => setIsImageLoading(false)}
               onError={() => setIsImageLoading(false)}
+              onClick={() => {
+                if (isEditing) {
+                  fileInputRef.current?.click();
+                  return;
+                }
+
+                if (form.image && form.image !== '/placeholder.png') {
+                  setIsImagePreviewOpen(true);
+                }
+              }}
             />
           </div>
+
+          {isEditing && form.image && form.image !== '/placeholder.png' && (
+            <button
+              type="button"
+              onClick={handleDeleteImage}
+              disabled={isImageLoading || isSubmitting}
+              className="mt-2 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+            >
+              Delete
+            </button>
+          )}
 
           <input
             ref={fileInputRef}
@@ -583,7 +669,7 @@ export default function PersonModal({
               <PersonSelect
                 people={availableParents}
                 value={form.parentId}
-                placeholder="Valideyn axtar..."
+                placeholder="Valideyn..."
                 emptyLabel="Valideyn qeyd olunmayıb"
                 onChange={(personId) =>
                   setEditForm((prev) => ({
@@ -596,7 +682,7 @@ export default function PersonModal({
               <PersonSelect
                 people={availableSpouses}
                 value={form.spouseId}
-                placeholder="Həyat yoldaşı axtar..."
+                placeholder="Həyat yoldaşı..."
                 emptyLabel="Həyat yoldaşı qeyd olunmayıb"
                 onChange={(personId) =>
                   setEditForm((prev) => ({
@@ -645,7 +731,8 @@ export default function PersonModal({
             </h1>
 
             <p className="text-center text-sm text-gray-500">
-              {formatDate(person.birthDate)} - {formatDate(person.deathDate)}
+              {formatDate(person.birthDate)}
+              {person.deathDate ? ` - ${formatDate(person.deathDate)}` : ''}
             </p>
 
             <div className="mt-3 text-sm text-center text-gray-600">
@@ -654,8 +741,13 @@ export default function PersonModal({
                 {getParentsText(person, people)}
               </div>
 
+              <div className="mt-1">
+                <span className="font-semibold">Qardaş/Bacı:</span>{' '}
+                {getSiblingsText(person, people)}
+              </div>
+
               {person.description && (
-                <div className="mt-3 max-h-48 overflow-y-auto pr-2">
+                <div className="mt-3 max-h-48 overflow-y-auto pr-2 whitespace-pre-wrap text-left">
                   {person.description}
                 </div>
               )}
@@ -672,6 +764,23 @@ export default function PersonModal({
           </>
         )}
       </div>
+
+      {isImagePreviewOpen && (
+        <div
+          className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-6"
+          onClick={() => setIsImagePreviewOpen(false)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh]">
+            <Image
+              src={form.image || person.image || '/placeholder.png'}
+              alt={getFullName(person)}
+              width={900}
+              height={900}
+              className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            />
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={showDeleteConfirm}

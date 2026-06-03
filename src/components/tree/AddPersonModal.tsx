@@ -120,8 +120,24 @@ export default function AddPersonModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
+  }
+
+  function handleDeleteImage() {
+    if (!imagePreview) return;
+
+    URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   }
 
   async function handleSubmit() {
@@ -196,7 +212,7 @@ export default function AddPersonModal({
           Əlavə et
         </h2>
 
-        <div className="flex justify-center mt-4 text-black">
+        <div className="flex flex-col items-center mt-4 text-black">
           <div
             onClick={() => fileInputRef.current?.click()}
             className="w-24 h-24 rounded-full border-2 border-black border-dashed flex items-center justify-center overflow-hidden cursor-pointer hover:border-gray-600"
@@ -213,6 +229,16 @@ export default function AddPersonModal({
               <span className="text-xs">Yüklə</span>
             )}
           </div>
+
+          {imagePreview && (
+            <button
+              type="button"
+              onClick={handleDeleteImage}
+              className="mt-2 text-xs text-red-500 hover:text-red-700"
+            >
+              Delete
+            </button>
+          )}
 
           <input
             ref={fileInputRef}
@@ -404,7 +430,7 @@ export default function AddPersonModal({
           <PersonSelect
             people={people}
             value={parentId}
-            placeholder="Valideyn axtar..."
+            placeholder="Valideyn..."
             emptyLabel="Valideyn qeyd olunmayıb"
             onChange={setParentId}
           />
@@ -412,7 +438,7 @@ export default function AddPersonModal({
           <PersonSelect
             people={availableSpouses}
             value={spouseId}
-            placeholder="Həyat yoldaşı axtar..."
+            placeholder="Həyat yoldaşı..."
             emptyLabel="Həyat yoldaşı qeyd olunmayıb"
             onChange={setSpouseId}
           />

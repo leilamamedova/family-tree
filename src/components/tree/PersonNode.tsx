@@ -83,7 +83,8 @@ export default function PersonNode({ data }: Props) {
       </div>
 
       <div className="text-[10px] text-gray-500">
-        {formatDate(person.birthDate)} - {formatDate(person.deathDate)}
+        {formatDate(person.birthDate)}
+        {person.deathDate ? ` - ${formatDate(person.deathDate)}` : ''}{' '}
       </div>
     </div>
   );

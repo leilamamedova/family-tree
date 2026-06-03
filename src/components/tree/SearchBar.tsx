@@ -101,8 +101,8 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
                 <div className="font-medium">{getFullName(person)}</div>
 
                 <div className="text-xs text-gray-500">
-                  {formatDate(person.birthDate)} -{' '}
-                  {formatDate(person.deathDate)}
+                  {formatDate(person.birthDate)}
+                  {person.deathDate ? ` - ${formatDate(person.deathDate)}` : ''}
                 </div>
               </div>
             ))}
