@@ -58,6 +58,7 @@ export default function PersonSelect({
           setIsOpen(true);
         }}
         className="border rounded px-3 py-2 text-sm w-full outline-none"
+        name="selectBox"
       />
 
       {isOpen && (

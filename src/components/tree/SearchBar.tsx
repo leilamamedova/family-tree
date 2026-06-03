@@ -76,6 +76,7 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Axtarış..."
           className="px-4 py-2 w-full rounded-full border shadow-sm outline-none bg-transparent pr-10"
+          name="searchBar"
         />
 
         {query && (

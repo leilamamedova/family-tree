@@ -6,7 +6,7 @@ import { Person } from '@/types/person';
 import { Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import DatePicker from 'react-datepicker';
-import { format } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 import PersonSelect from './PersonSelect';
 import { uploadImage } from '@/lib/uploadImage';
 
@@ -26,14 +26,40 @@ type EditForm = {
   patronymic: string;
   birthDate: Date | null;
   deathDate: Date | null;
+  birthDateInput: string;
+  deathDateInput: string;
   description: string;
   image: string;
   parentId: string;
   spouseId: string;
 };
 
+function formatDateInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+
+  return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+}
+
+function parseDateInput(value: string) {
+  if (!value) return null;
+  if (value.length !== 10) return null;
+
+  const parsedDate = parse(value, 'dd.MM.yyyy', new Date());
+
+  if (!isValid(parsedDate)) return null;
+
+  if (format(parsedDate, 'dd.MM.yyyy') !== value) return null;
+
+  return parsedDate;
+}
+
 function validateDateInput(value: string) {
-  return /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$/.test(value);
+  if (!value) return true;
+
+  return !!parseDateInput(value);
 }
 
 function parseDate(value?: string | null) {
@@ -86,6 +112,8 @@ function createEditForm(person: Person): EditForm {
     patronymic: person.patronymic || '',
     birthDate: parseDate(person.birthDate),
     deathDate: parseDate(person.deathDate),
+    birthDateInput: formatDate(person.birthDate),
+    deathDateInput: formatDate(person.deathDate),
     description: person.description || '',
     image: person.image || '/placeholder.png',
     parentId: person.parents?.[0] || '',
@@ -182,6 +210,17 @@ export default function PersonModal({
   async function handleSave() {
     const currentForm = editForm ?? createEditForm(person);
 
+    const isBirthFormatInvalid =
+      !!currentForm.birthDateInput &&
+      !validateDateInput(currentForm.birthDateInput);
+
+    const isDeathFormatInvalid =
+      !!currentForm.deathDateInput &&
+      !validateDateInput(currentForm.deathDateInput);
+
+    setBirthDateError(isBirthFormatInvalid);
+    setDeathDateError(isDeathFormatInvalid);
+
     const newErrors = {
       firstName: !currentForm.firstName.trim(),
       lastName: !currentForm.lastName.trim(),
@@ -195,8 +234,8 @@ export default function PersonModal({
 
     const hasErrors =
       Object.values(newErrors).some(Boolean) ||
-      birthDateError ||
-      deathDateError;
+      isBirthFormatInvalid ||
+      isDeathFormatInvalid;
 
     if (hasErrors) return;
 
@@ -315,6 +354,7 @@ export default function PersonModal({
             accept="image/*"
             hidden
             onChange={handleImageUpload}
+            name="editFileInput"
           />
         </div>
 
@@ -337,6 +377,7 @@ export default function PersonModal({
                     setErrors((prev) => ({ ...prev, firstName: false }));
                   }
                 }}
+                name="editFirstName"
               />
 
               <input
@@ -355,6 +396,7 @@ export default function PersonModal({
                     setErrors((prev) => ({ ...prev, lastName: false }));
                   }
                 }}
+                name="addLastName"
               />
 
               <input
@@ -367,7 +409,158 @@ export default function PersonModal({
                     patronymic: e.target.value,
                   }))
                 }
+                name="addPatronymicName"
               />
+
+              <div className="flex gap-2 w-full">
+                <DatePicker
+                  selected={form.birthDate}
+                  value={form.birthDateInput}
+                  onChange={(
+                    date: Date | null,
+                    event?:
+                      | React.MouseEvent<HTMLElement>
+                      | React.KeyboardEvent<HTMLElement>,
+                  ) => {
+                    if (event?.type === 'change') return;
+
+                    setBirthDateError(false);
+
+                    setEditForm((prev) => ({
+                      ...(prev ?? createEditForm(person)),
+                      birthDate: date,
+                      birthDateInput: date ? format(date, 'dd.MM.yyyy') : '',
+                    }));
+                  }}
+                  onChangeRaw={(e) => {
+                    e?.preventDefault();
+
+                    const input = e?.target as HTMLInputElement | null;
+                    if (!input) return;
+
+                    const formattedValue = formatDateInput(input.value);
+
+                    setEditForm((prev) => {
+                      const current = prev ?? createEditForm(person);
+                      const parsedDate =
+                        formattedValue.length === 10
+                          ? parseDateInput(formattedValue)
+                          : null;
+
+                      return {
+                        ...current,
+                        birthDate: parsedDate,
+                        birthDateInput: formattedValue,
+                      };
+                    });
+
+                    if (!formattedValue || formattedValue.length < 10) {
+                      setBirthDateError(false);
+                      return;
+                    }
+
+                    setBirthDateError(!parseDateInput(formattedValue));
+                  }}
+                  onBlur={() => {
+                    const currentForm = editForm ?? createEditForm(person);
+
+                    if (!currentForm.birthDateInput) {
+                      setBirthDateError(false);
+                      return;
+                    }
+
+                    setBirthDateError(
+                      !validateDateInput(currentForm.birthDateInput),
+                    );
+                  }}
+                  dateFormat="dd.MM.yyyy"
+                  placeholderText="Doğum tarixi"
+                  showYearDropdown
+                  showMonthDropdown
+                  dropdownMode="select"
+                  isClearable
+                  popperPlacement="top-start"
+                  wrapperClassName="w-1/2"
+                  className={`border rounded px-3 py-2 text-sm w-full min-w-0 ${
+                    birthDateError ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  name="birthDate"
+                />
+
+                <DatePicker
+                  selected={form.deathDate}
+                  value={form.deathDateInput}
+                  onChange={(
+                    date: Date | null,
+                    event?:
+                      | React.MouseEvent<HTMLElement>
+                      | React.KeyboardEvent<HTMLElement>,
+                  ) => {
+                    if (event?.type === 'change') return;
+
+                    setDeathDateError(false);
+
+                    setEditForm((prev) => ({
+                      ...(prev ?? createEditForm(person)),
+                      deathDate: date,
+                      deathDateInput: date ? format(date, 'dd.MM.yyyy') : '',
+                    }));
+                  }}
+                  onChangeRaw={(e) => {
+                    e?.preventDefault();
+
+                    const input = e?.target as HTMLInputElement | null;
+                    if (!input) return;
+
+                    const formattedValue = formatDateInput(input.value);
+
+                    setEditForm((prev) => {
+                      const current = prev ?? createEditForm(person);
+                      const parsedDate =
+                        formattedValue.length === 10
+                          ? parseDateInput(formattedValue)
+                          : null;
+
+                      return {
+                        ...current,
+                        deathDate: parsedDate,
+                        deathDateInput: formattedValue,
+                      };
+                    });
+
+                    if (!formattedValue || formattedValue.length < 10) {
+                      setDeathDateError(false);
+                      return;
+                    }
+
+                    setDeathDateError(!parseDateInput(formattedValue));
+                  }}
+                  onBlur={() => {
+                    const currentForm = editForm ?? createEditForm(person);
+
+                    if (!currentForm.deathDateInput) {
+                      setDeathDateError(false);
+                      return;
+                    }
+
+                    setDeathDateError(
+                      !validateDateInput(currentForm.deathDateInput),
+                    );
+                  }}
+                  dateFormat="dd.MM.yyyy"
+                  placeholderText="Ölüm tarixi"
+                  showYearDropdown
+                  showMonthDropdown
+                  dropdownMode="select"
+                  isClearable
+                  popperPlacement="top-start"
+                  wrapperClassName="w-1/2"
+                  className={`border rounded px-3 py-2 text-sm w-full min-w-0 ${
+                    deathDateError ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  name="deathDate"
+                />
+              </div>
 
               {birthDateError && (
                 <span className="text-red-500 text-xs">
@@ -386,90 +579,6 @@ export default function PersonModal({
                   Ölüm tarixi doğum tarixindən əvvəl ola bilməz
                 </span>
               )}
-
-              <div className="flex gap-2">
-                <DatePicker
-                  selected={form.birthDate}
-                  onChange={(date: Date | null) => {
-                    setBirthDateError(false);
-
-                    setEditForm((prev) => ({
-                      ...(prev ?? createEditForm(person)),
-                      birthDate: date,
-                    }));
-                  }}
-                  onChangeRaw={(e) => {
-                    if (!e) return;
-
-                    const value = (e.target as HTMLInputElement).value;
-
-                    if (!value) {
-                      setBirthDateError(false);
-                      return;
-                    }
-
-                    setBirthDateError(!validateDateInput(value));
-                  }}
-                  onBlur={(e) => {
-                    if (!e) return;
-
-                    const value = (e.target as HTMLInputElement).value;
-
-                    if (!value) setBirthDateError(false);
-                  }}
-                  dateFormat="dd.MM.yyyy"
-                  placeholderText="Doğum tarixi"
-                  showYearDropdown
-                  showMonthDropdown
-                  dropdownMode="select"
-                  isClearable
-                  popperPlacement="top-start"
-                  className={`border rounded px-3 py-2 text-sm w-full ${
-                    birthDateError ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-
-                <DatePicker
-                  selected={form.deathDate}
-                  onChange={(date: Date | null) => {
-                    setDeathDateError(false);
-
-                    setEditForm((prev) => ({
-                      ...(prev ?? createEditForm(person)),
-                      deathDate: date,
-                    }));
-                  }}
-                  onChangeRaw={(e) => {
-                    if (!e) return;
-
-                    const value = (e.target as HTMLInputElement).value;
-
-                    if (!value) {
-                      setDeathDateError(false);
-                      return;
-                    }
-
-                    setDeathDateError(!validateDateInput(value));
-                  }}
-                  onBlur={(e) => {
-                    if (!e) return;
-
-                    const value = (e.target as HTMLInputElement).value;
-
-                    if (!value) setDeathDateError(false);
-                  }}
-                  dateFormat="dd.MM.yyyy"
-                  placeholderText="Ölüm tarixi"
-                  showYearDropdown
-                  showMonthDropdown
-                  dropdownMode="select"
-                  isClearable
-                  popperPlacement="top-start"
-                  className={`border rounded px-3 py-2 text-sm w-full ${
-                    deathDateError ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-              </div>
 
               <PersonSelect
                 people={availableParents}
@@ -507,6 +616,7 @@ export default function PersonModal({
                     description: e.target.value,
                   }))
                 }
+                name="description"
               />
             </div>
 
@@ -565,7 +675,7 @@ export default function PersonModal({
 
       <ConfirmModal
         isOpen={showDeleteConfirm}
-        title="Delete person"
+        title="Silmək"
         message={`${getFullName(person)} silmək istədiyinizə əminsiniz?`}
         confirmText="Sil"
         cancelText="Ləğv et"
