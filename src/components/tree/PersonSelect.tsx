@@ -9,6 +9,7 @@ type Props = {
   value: string;
   placeholder: string;
   emptyLabel: string;
+  showSpouseName?: boolean;
   onChange: (personId: string) => void;
 };
 
@@ -18,12 +19,33 @@ function getFullName(person: Person) {
     .join(' ');
 }
 
+function getOptionLabel(
+  person: Person,
+  people: Person[],
+  showSpouseName: boolean,
+) {
+  const fullName = getFullName(person);
+
+  if (!showSpouseName || !person.spouseId) {
+    return fullName;
+  }
+
+  const spouse = people.find((p) => p.id === person.spouseId);
+
+  if (!spouse) {
+    return fullName;
+  }
+
+  return `${fullName} (${getFullName(spouse)})`;
+}
+
 export default function PersonSelect({
   people,
   value,
   placeholder,
   emptyLabel,
   onChange,
+  showSpouseName = false,
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -74,9 +96,13 @@ export default function PersonSelect({
           isOpen && query
             ? query
             : selectedPerson
-              ? getFullName(selectedPerson)
+              ? getOptionLabel(selectedPerson, people, showSpouseName)
               : ''
         }
+        autoComplete="off"
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
         placeholder={placeholder}
         onFocus={openSelect}
         onClick={openSelect}
@@ -117,7 +143,7 @@ export default function PersonSelect({
                 'w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100',
               )}
             >
-              {getFullName(person)}
+              {getOptionLabel(person, people, showSpouseName)}{' '}
             </button>
           ))}
 

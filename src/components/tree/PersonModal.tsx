@@ -677,6 +677,7 @@ export default function PersonModal({
                     parentId: personId,
                   }))
                 }
+                showSpouseName
               />
 
               <PersonSelect

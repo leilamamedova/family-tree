@@ -433,6 +433,7 @@ export default function AddPersonModal({
             placeholder="Valideyn..."
             emptyLabel="Valideyn qeyd olunmayıb"
             onChange={setParentId}
+            showSpouseName
           />
 
           <PersonSelect
