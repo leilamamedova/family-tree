@@ -9,6 +9,7 @@ import { uploadImage } from '@/lib/uploadImage';
 import { format, isValid, parse } from 'date-fns';
 
 import 'react-datepicker/dist/react-datepicker.css';
+import { useGlobalLoading } from '../providers/GlobalLoadingProvider';
 
 type Mode = 'root' | 'child' | 'parent';
 
@@ -55,6 +56,8 @@ export default function AddPersonModal({
   onClose,
   onCreate,
 }: Props) {
+  const { withLoading } = useGlobalLoading();
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [firstName, setFirstName] = useState('');
@@ -169,7 +172,7 @@ export default function AddPersonModal({
 
     try {
       const uploadedImageUrl = imageFile
-        ? await uploadImage(imageFile)
+        ? await withLoading(() => uploadImage(imageFile))
         : '/placeholder.png';
 
       const newPerson: Person = {

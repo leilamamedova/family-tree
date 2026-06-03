@@ -18,6 +18,7 @@ import {
   GET_PERSONS,
   UPDATE_PERSON,
 } from '@/graphql/personOperations';
+import { useGlobalLoading } from '../providers/GlobalLoadingProvider';
 
 const nodeTypes = {
   person: PersonNode,
@@ -31,6 +32,7 @@ export default function TreeView() {
   const [addMode, setAddMode] = useState<'root' | 'child' | 'parent'>('root');
 
   const { setCenter } = useReactFlow();
+  const { withLoading } = useGlobalLoading();
 
   const { data, loading, error, refetch } = useQuery(GET_PERSONS);
 
@@ -93,61 +95,67 @@ export default function TreeView() {
   }
 
   async function deletePerson(personId: string) {
-    await deletePersonMutation({
-      variables: {
-        id: personId,
-      },
-    });
+    await withLoading(async () => {
+      await deletePersonMutation({
+        variables: {
+          id: personId,
+        },
+      });
 
-    setSelectedPerson(null);
-    await refetch();
+      setSelectedPerson(null);
+      await refetch();
+    });
   }
 
   async function updatePerson(updatedPerson: Person) {
-    await updatePersonMutation({
-      variables: {
-        id: updatedPerson.id,
-        input: {
-          firstName: updatedPerson.firstName,
-          lastName: updatedPerson.lastName,
-          patronymic: updatedPerson.patronymic || '',
-          birthDate: updatedPerson.birthDate,
-          deathDate: updatedPerson.deathDate,
-          image: updatedPerson.image,
-          description: updatedPerson.description,
-          parents: updatedPerson.parents || [],
-          children: updatedPerson.children || [],
-          spouseId: updatedPerson.spouseId || null,
+    await withLoading(async () => {
+      await updatePersonMutation({
+        variables: {
+          id: updatedPerson.id,
+          input: {
+            firstName: updatedPerson.firstName,
+            lastName: updatedPerson.lastName,
+            patronymic: updatedPerson.patronymic || '',
+            birthDate: updatedPerson.birthDate,
+            deathDate: updatedPerson.deathDate,
+            image: updatedPerson.image,
+            description: updatedPerson.description,
+            parents: updatedPerson.parents || [],
+            children: updatedPerson.children || [],
+            spouseId: updatedPerson.spouseId || null,
+          },
         },
-      },
-    });
+      });
 
-    setSelectedPerson(updatedPerson);
-    await refetch();
+      setSelectedPerson(updatedPerson);
+      await refetch();
+    });
   }
 
   async function handleCreatePerson(person: Person) {
-    await createPersonMutation({
-      variables: {
-        input: {
-          firstName: person.firstName,
-          lastName: person.lastName,
-          patronymic: person.patronymic || '',
-          birthDate: person.birthDate,
-          deathDate: person.deathDate,
-          image: person.image,
-          description: person.description,
-          parents: person.parents || [],
-          children: person.children || [],
-          spouseId: person.spouseId || null,
+    await withLoading(async () => {
+      await createPersonMutation({
+        variables: {
+          input: {
+            firstName: person.firstName,
+            lastName: person.lastName,
+            patronymic: person.patronymic || '',
+            birthDate: person.birthDate,
+            deathDate: person.deathDate,
+            image: person.image,
+            description: person.description,
+            parents: person.parents || [],
+            children: person.children || [],
+            spouseId: person.spouseId || null,
+          },
         },
-      },
-    });
+      });
 
-    await refetch();
+      await refetch();
+    });
   }
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
         Loading family tree...

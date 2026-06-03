@@ -12,6 +12,7 @@ import { uploadImage } from '@/lib/uploadImage';
 import { deleteImage } from '@/lib/deleteImage';
 
 import 'react-datepicker/dist/react-datepicker.css';
+import { useGlobalLoading } from '../providers/GlobalLoadingProvider';
 
 type Props = {
   selectedPerson: Person | null;
@@ -147,6 +148,8 @@ export default function PersonModal({
   onDelete,
   onUpdate,
 }: Props) {
+  const { withLoading } = useGlobalLoading();
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -298,9 +301,9 @@ export default function PersonModal({
       let finalImageUrl = currentForm.image || '/placeholder.png';
 
       if (imageFile) {
-        finalImageUrl = await uploadImage(imageFile, person.image);
+        finalImageUrl = await withLoading(() => uploadImage(imageFile));
       } else if (deletedImageUrl) {
-        await deleteImage(deletedImageUrl);
+        await withLoading(() => deleteImage(deletedImageUrl));
         finalImageUrl = '/placeholder.png';
       }
 

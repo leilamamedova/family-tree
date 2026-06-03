@@ -1,6 +1,7 @@
 import './globals.css';
 import ReactFlowProvider from '@/components/providers/ReactFlowProvider';
 import ApolloProvider from '@/components/providers/ApolloProvider';
+import { GlobalLoadingProvider } from '@/components/providers/GlobalLoadingProvider';
 
 export const metadata = {
   title: 'FamTree',
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ApolloProvider>
-          <ReactFlowProvider>{children}</ReactFlowProvider>
+          <GlobalLoadingProvider>
+            <ReactFlowProvider>{children}</ReactFlowProvider>
+          </GlobalLoadingProvider>
         </ApolloProvider>
       </body>
     </html>
