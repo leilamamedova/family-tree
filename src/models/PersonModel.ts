@@ -20,13 +20,13 @@ const PersonSchema = new Schema(
       trim: true,
     },
 
-    birthYear: {
-      type: Number,
+    birthDate: {
+      type: Date,
       default: null,
     },
 
-    deathYear: {
-      type: Number,
+    deathDate: {
+      type: Date,
       default: null,
     },
 

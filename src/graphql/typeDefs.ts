@@ -6,8 +6,8 @@ export const typeDefs = `#graphql
     lastName: String!
     patronymic: String
 
-    birthYear: Int
-    deathYear: Int
+    birthDate: String
+    deathDate: String
 
     image: String
     description: String
@@ -23,8 +23,8 @@ export const typeDefs = `#graphql
     lastName: String!
     patronymic: String
 
-    birthYear: Int
-    deathYear: Int
+    birthDate: String
+    deathDate: String
 
     image: String
     description: String
@@ -40,8 +40,8 @@ export const typeDefs = `#graphql
     lastName: String
     patronymic: String
 
-    birthYear: Int
-    deathYear: Int
+    birthDate: String
+    deathDate: String
 
     image: String
     description: String

@@ -4,6 +4,7 @@ import { Handle, Position } from 'reactflow';
 import { Person } from '@/types/person';
 import clsx from 'clsx';
 import Image from 'next/image';
+import { format } from 'date-fns';
 
 type Props = {
   data: {
@@ -13,26 +14,42 @@ type Props = {
   };
 };
 
+function formatDate(value?: string | null) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return '';
+
+  return format(date, 'dd.MM.yyyy');
+}
+
+function getFullName(person: Person) {
+  return [person.firstName, person.lastName, person.patronymic]
+    .filter(Boolean)
+    .join(' ');
+}
+
 export default function PersonNode({ data }: Props) {
   const { person, onClick, highlighted } = data;
-  const isDeceased = !!person.deathYear;
+
+  const isDeceased = !!person.deathDate;
 
   return (
     <div
       onClick={() => onClick(person)}
       className="cursor-pointer flex flex-col items-center"
     >
-      {/* child connections */}
       <Handle id="child-target" type="target" position={Position.Top} />
       <Handle id="child-source" type="source" position={Position.Bottom} />
 
-      {/* spouse connections: top-to-top */}
       <Handle
         id="spouse-source"
         type="source"
         position={Position.Top}
         style={{ opacity: 0 }}
       />
+
       <Handle
         id="spouse-target"
         type="target"
@@ -52,7 +69,7 @@ export default function PersonNode({ data }: Props) {
       >
         <Image
           src={person.image || '/placeholder.png'}
-          alt={`${person.firstName} ${person.lastName} ${person.patronymic}`}
+          alt={getFullName(person)}
           fill
           sizes="80px"
           className="object-cover"
@@ -62,11 +79,11 @@ export default function PersonNode({ data }: Props) {
       <div className="text-center mt-2 text-xs font-medium">
         <div>{person.firstName}</div>
         <div>{person.lastName}</div>
-        <div>{person.patronymic}</div>
+        {person.patronymic && <div>{person.patronymic}</div>}
       </div>
 
       <div className="text-[10px] text-gray-500">
-        {person.birthYear} - {person.deathYear || ''}
+        {formatDate(person.birthDate)} - {formatDate(person.deathDate)}
       </div>
     </div>
   );

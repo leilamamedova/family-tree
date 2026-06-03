@@ -5,8 +5,8 @@ export type Person = {
   lastName: string;
   patronymic?: string;
 
-  birthYear: number | null;
-  deathYear?: number | null;
+  birthDate?: string | null;
+  deathDate?: string | null;
 
   image?: string;
 

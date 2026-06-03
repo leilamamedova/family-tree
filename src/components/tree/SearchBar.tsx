@@ -4,12 +4,29 @@ import { useState } from 'react';
 import { Person } from '@/types/person';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
+import { format } from 'date-fns';
 
 type Props = {
   people: Person[];
   onSelect: (person: Person) => void;
   onClear?: () => void;
 };
+
+function formatDate(value?: string | null) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return '';
+
+  return format(date, 'dd.MM.yyyy');
+}
+
+function getFullName(person: Person) {
+  return [person.firstName, person.lastName, person.patronymic]
+    .filter(Boolean)
+    .join(' ');
+}
 
 export default function SearchBar({ people, onSelect, onClear }: Props) {
   const [query, setQuery] = useState('');
@@ -26,18 +43,10 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
 
     const q = value.toLowerCase();
 
-    const filtered = people.filter((p) => {
-      const patronymic = p.patronymic || '';
+    const filtered = people.filter((person) => {
+      const fullName = getFullName(person).toLowerCase();
 
-      const fullName =
-        `${p.firstName} ${p.lastName} ${patronymic}`.toLowerCase();
-
-      return (
-        p.firstName.toLowerCase().includes(q) ||
-        p.lastName.toLowerCase().includes(q) ||
-        patronymic.toLowerCase().includes(q) ||
-        fullName.includes(q)
-      );
+      return fullName.includes(q);
     });
 
     setResults(filtered);
@@ -48,9 +57,7 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
   };
 
   const selectPerson = (person: Person) => {
-    const patronymic = person.patronymic ? ` ${person.patronymic}` : '';
-
-    setQuery(`${person.firstName} ${person.lastName} ${patronymic}`);
+    setQuery(getFullName(person));
     setResults([]);
     onSelect(person);
   };
@@ -82,29 +89,22 @@ export default function SearchBar({ people, onSelect, onClear }: Props) {
 
         {results.length > 0 && (
           <div className="absolute mt-2 w-full bg-transparent border rounded-lg shadow-lg max-h-60 overflow-auto">
-            {results.map((person) => {
-              const patronymic = person.patronymic
-                ? ` ${person.patronymic}`
-                : '';
+            {results.map((person) => (
+              <div
+                key={person.id}
+                onClick={() => selectPerson(person)}
+                className={clsx(
+                  'px-3 py-2 cursor-pointer text-sm hover:bg-white/10',
+                )}
+              >
+                <div className="font-medium">{getFullName(person)}</div>
 
-              return (
-                <div
-                  key={person.id}
-                  onClick={() => selectPerson(person)}
-                  className={clsx(
-                    'px-3 py-2 cursor-pointer text-sm hover:bg-white/10',
-                  )}
-                >
-                  <div className="font-medium">
-                    {person.firstName} {person.lastName} {patronymic}
-                  </div>
-
-                  <div className="text-xs text-gray-500">
-                    {person.birthYear} - {person.deathYear || ''}
-                  </div>
+                <div className="text-xs text-gray-500">
+                  {formatDate(person.birthDate)} -{' '}
+                  {formatDate(person.deathDate)}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -12,8 +12,8 @@ export const GET_PERSONS: TypedDocumentNode<GetPersonsData> = gql`
       firstName
       lastName
       patronymic
-      birthYear
-      deathYear
+      birthDate
+      deathDate
       image
       description
       parents
@@ -30,8 +30,8 @@ export const CREATE_PERSON = gql`
       firstName
       lastName
       patronymic
-      birthYear
-      deathYear
+      birthDate
+      deathDate
       image
       description
       parents
@@ -48,8 +48,8 @@ export const UPDATE_PERSON = gql`
       firstName
       lastName
       patronymic
-      birthYear
-      deathYear
+      birthDate
+      deathDate
       image
       description
       parents

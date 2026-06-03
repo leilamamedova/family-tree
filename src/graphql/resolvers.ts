@@ -5,8 +5,8 @@ type CreatePersonInput = {
   firstName: string;
   lastName: string;
   patronymic?: string;
-  birthYear?: number | null;
-  deathYear?: number | null;
+  birthDate?: string | null;
+  deathDate?: string | null;
   image?: string;
   description?: string;
   parents?: string[];
@@ -20,12 +20,11 @@ type MongoPerson = {
   _id: {
     toString: () => string;
   };
-  id?: string;
   firstName: string;
   lastName: string;
   patronymic?: string;
-  birthYear?: number | null;
-  deathYear?: number | null;
+  birthDate?: Date | string | null;
+  deathDate?: Date | string | null;
   image?: string;
   description?: string;
   parents?: string[];
@@ -33,20 +32,53 @@ type MongoPerson = {
   spouseId?: string | null;
 };
 
+function normalizeDate(value?: Date | string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toISOString();
+}
+
 function normalizePerson(person: MongoPerson) {
   return {
     id: person._id.toString(),
     firstName: person.firstName,
     lastName: person.lastName,
     patronymic: person.patronymic || '',
-    birthYear: person.birthYear ?? null,
-    deathYear: person.deathYear ?? null,
+    birthDate: normalizeDate(person.birthDate),
+    deathDate: normalizeDate(person.deathDate),
     image: person.image || '/placeholder.png',
     description: person.description || '',
     parents: person.parents || [],
     children: person.children || [],
     spouseId: person.spouseId || null,
   };
+}
+
+function parseDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('Invalid date format');
+  }
+
+  return date;
+}
+
+function validateDates(birthDate?: string | null, deathDate?: string | null) {
+  const birth = parseDate(birthDate);
+  const death = parseDate(deathDate);
+
+  if (birth && death && death < birth) {
+    throw new Error('Death date cannot be earlier than birth date');
+  }
+
+  return { birth, death };
 }
 
 async function normalizeParents(parents?: string[]) {
@@ -116,6 +148,11 @@ export const resolvers = {
     createPerson: async (_: unknown, args: { input: CreatePersonInput }) => {
       await connectMongo();
 
+      const { birth, death } = validateDates(
+        args.input.birthDate,
+        args.input.deathDate,
+      );
+
       const normalizedParents = await normalizeParents(args.input.parents);
 
       await validateSpouse(args.input.spouseId);
@@ -124,8 +161,8 @@ export const resolvers = {
         firstName: args.input.firstName,
         lastName: args.input.lastName,
         patronymic: args.input.patronymic || '',
-        birthYear: args.input.birthYear ?? null,
-        deathYear: args.input.deathYear ?? null,
+        birthDate: birth,
+        deathDate: death,
         image: args.input.image || '/placeholder.png',
         description: args.input.description || '',
         parents: normalizedParents,
@@ -161,6 +198,7 @@ export const resolvers = {
       }
 
       const oldSpouseId = existingPerson.spouseId || null;
+
       const newSpouseId =
         args.input.spouseId === undefined ? oldSpouseId : args.input.spouseId;
 
@@ -183,10 +221,26 @@ export const resolvers = {
           ? existingPerson.parents || []
           : await normalizeParents(args.input.parents);
 
+      const birthDate =
+        args.input.birthDate === undefined
+          ? existingPerson.birthDate
+          : parseDate(args.input.birthDate);
+
+      const deathDate =
+        args.input.deathDate === undefined
+          ? existingPerson.deathDate
+          : parseDate(args.input.deathDate);
+
+      if (birthDate && deathDate && new Date(deathDate) < new Date(birthDate)) {
+        throw new Error('Death date cannot be earlier than birth date');
+      }
+
       const updated = await PersonModel.findByIdAndUpdate(
         args.id,
         {
           ...args.input,
+          birthDate,
+          deathDate,
           parents: normalizedParents,
           spouseId: newSpouseId || null,
         },

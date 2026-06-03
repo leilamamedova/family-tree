@@ -5,6 +5,11 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 import { Person } from '@/types/person';
 import { Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
+import DatePicker from 'react-datepicker';
+import { format } from 'date-fns';
+import PersonSelect from './PersonSelect';
+
+import 'react-datepicker/dist/react-datepicker.css';
 
 type Props = {
   selectedPerson: Person | null;
@@ -18,21 +23,51 @@ type EditForm = {
   firstName: string;
   lastName: string;
   patronymic: string;
-  birthYear: number | '';
-  deathYear: number | '';
+  birthDate: Date | null;
+  deathDate: Date | null;
   description: string;
   image: string;
   parentId: string;
   spouseId: string;
 };
 
+function validateDateInput(value: string) {
+  return /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$/.test(value);
+}
+
+function parseDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date;
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return '';
+
+  return format(date, 'dd.MM.yyyy');
+}
+
+function getFullName(person: Person) {
+  return [person.firstName, person.lastName, person.patronymic]
+    .filter(Boolean)
+    .join(' ');
+}
+
 function createEditForm(person: Person): EditForm {
   return {
     firstName: person.firstName,
     lastName: person.lastName,
     patronymic: person.patronymic || '',
-    birthYear: person.birthYear ?? '',
-    deathYear: person.deathYear ?? '',
+    birthDate: parseDate(person.birthDate),
+    deathDate: parseDate(person.deathDate),
     description: person.description || '',
     image: person.image || '/placeholder.png',
     parentId: person.parents?.[0] || '',
@@ -56,7 +91,11 @@ export default function PersonModal({
   const [errors, setErrors] = useState({
     firstName: false,
     lastName: false,
+    invalidDates: false,
   });
+
+  const [birthDateError, setBirthDateError] = useState(false);
+  const [deathDateError, setDeathDateError] = useState(false);
 
   if (!selectedPerson) return null;
 
@@ -77,7 +116,10 @@ export default function PersonModal({
     setErrors({
       firstName: false,
       lastName: false,
+      invalidDates: false,
     });
+    setBirthDateError(false);
+    setDeathDateError(false);
     setIsEditing(true);
   }
 
@@ -86,7 +128,10 @@ export default function PersonModal({
     setErrors({
       firstName: false,
       lastName: false,
+      invalidDates: false,
     });
+    setBirthDateError(false);
+    setDeathDateError(false);
     setIsEditing(false);
   }
 
@@ -108,11 +153,19 @@ export default function PersonModal({
     const newErrors = {
       firstName: !currentForm.firstName.trim(),
       lastName: !currentForm.lastName.trim(),
+      invalidDates:
+        !!currentForm.birthDate &&
+        !!currentForm.deathDate &&
+        currentForm.deathDate < currentForm.birthDate,
     };
 
     setErrors(newErrors);
 
-    const hasErrors = Object.values(newErrors).some(Boolean);
+    const hasErrors =
+      Object.values(newErrors).some(Boolean) ||
+      birthDateError ||
+      deathDateError;
+
     if (hasErrors) return;
 
     const updatedPerson: Person = {
@@ -120,8 +173,12 @@ export default function PersonModal({
       firstName: currentForm.firstName,
       lastName: currentForm.lastName,
       patronymic: currentForm.patronymic,
-      birthYear: currentForm.birthYear === '' ? null : currentForm.birthYear,
-      deathYear: currentForm.deathYear === '' ? null : currentForm.deathYear,
+      birthDate: currentForm.birthDate
+        ? currentForm.birthDate.toISOString()
+        : null,
+      deathDate: currentForm.deathDate
+        ? currentForm.deathDate.toISOString()
+        : null,
       description: currentForm.description,
       image: currentForm.image || '/placeholder.png',
       parents: currentForm.parentId ? [currentForm.parentId] : [],
@@ -134,7 +191,10 @@ export default function PersonModal({
     setErrors({
       firstName: false,
       lastName: false,
+      invalidDates: false,
     });
+    setBirthDateError(false);
+    setDeathDateError(false);
     setIsEditing(false);
   }
 
@@ -143,7 +203,10 @@ export default function PersonModal({
     setErrors({
       firstName: false,
       lastName: false,
+      invalidDates: false,
     });
+    setBirthDateError(false);
+    setDeathDateError(false);
     setIsEditing(false);
     setSelectedPerson(null);
   }
@@ -175,12 +238,12 @@ export default function PersonModal({
               if (isEditing) fileInputRef.current?.click();
             }}
             className={`relative w-24 h-24 rounded-full overflow-hidden border-2 ${
-              person.deathYear ? 'grayscale opacity-70' : ''
+              person.deathDate ? 'grayscale opacity-70' : ''
             } ${isEditing ? 'cursor-pointer hover:border-gray-600' : ''}`}
           >
             <Image
               src={form.image || person.image || '/placeholder.png'}
-              alt={`${person.firstName} ${person.lastName} ${person.patronymic}`}
+              alt={getFullName(person)}
               fill
               sizes="96px"
               loading="eager"
@@ -254,71 +317,137 @@ export default function PersonModal({
                 }
               />
 
+              {birthDateError && (
+                <span className="text-red-500 text-xs">
+                  Doğru tarix formatı daxil edin: dd.mm.yyyy
+                </span>
+              )}
+
+              {deathDateError && (
+                <span className="text-red-500 text-xs">
+                  Doğru tarix formatı daxil edin: dd.mm.yyyy
+                </span>
+              )}
+
+              {errors.invalidDates && (
+                <span className="text-red-500 text-xs">
+                  Ölüm tarixi doğum tarixindən əvvəl ola bilməz
+                </span>
+              )}
+
               <div className="flex gap-2">
-                <input
-                  className="border rounded px-3 py-2 text-sm w-1/2"
-                  placeholder="Doğum tarixi"
-                  type="number"
-                  value={form.birthYear}
-                  onChange={(e) =>
+                <DatePicker
+                  selected={form.birthDate}
+                  onChange={(date: Date | null) => {
+                    setBirthDateError(false);
+
                     setEditForm((prev) => ({
                       ...(prev ?? createEditForm(person)),
-                      birthYear:
-                        e.target.value === '' ? '' : Number(e.target.value),
-                    }))
-                  }
+                      birthDate: date,
+                    }));
+                  }}
+                  onChangeRaw={(e) => {
+                    if (!e) return;
+
+                    const value = (e.target as HTMLInputElement).value;
+
+                    if (!value) {
+                      setBirthDateError(false);
+                      return;
+                    }
+
+                    setBirthDateError(!validateDateInput(value));
+                  }}
+                  onBlur={(e) => {
+                    if (!e) return;
+
+                    const value = (e.target as HTMLInputElement).value;
+
+                    if (!value) {
+                      setBirthDateError(false);
+                    }
+                  }}
+                  dateFormat="dd.MM.yyyy"
+                  placeholderText="Doğum tarixi"
+                  showYearDropdown
+                  showMonthDropdown
+                  dropdownMode="select"
+                  isClearable
+                  popperPlacement="top-start"
+                  className={`border rounded px-3 py-2 text-sm w-full ${
+                    birthDateError ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
 
-                <input
-                  className="border rounded px-3 py-2 text-sm w-1/2"
-                  placeholder="Ölüm tarixi"
-                  type="number"
-                  value={form.deathYear}
-                  onChange={(e) =>
+                <DatePicker
+                  selected={form.deathDate}
+                  onChange={(date: Date | null) => {
+                    setDeathDateError(false);
+
                     setEditForm((prev) => ({
                       ...(prev ?? createEditForm(person)),
-                      deathYear:
-                        e.target.value === '' ? '' : Number(e.target.value),
-                    }))
-                  }
+                      deathDate: date,
+                    }));
+                  }}
+                  onChangeRaw={(e) => {
+                    if (!e) return;
+
+                    const value = (e.target as HTMLInputElement).value;
+
+                    if (!value) {
+                      setDeathDateError(false);
+                      return;
+                    }
+
+                    setDeathDateError(!validateDateInput(value));
+                  }}
+                  onBlur={(e) => {
+                    if (!e) return;
+
+                    const value = (e.target as HTMLInputElement).value;
+
+                    if (!value) {
+                      setDeathDateError(false);
+                    }
+                  }}
+                  dateFormat="dd.MM.yyyy"
+                  placeholderText="Ölüm tarixi"
+                  showYearDropdown
+                  showMonthDropdown
+                  dropdownMode="select"
+                  isClearable
+                  popperPlacement="top-start"
+                  className={`border rounded px-3 py-2 text-sm w-full ${
+                    deathDateError ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
               </div>
 
-              <select
-                className="border rounded px-3 py-2 text-sm"
+              <PersonSelect
+                people={availableParents}
                 value={form.parentId}
-                onChange={(e) =>
+                placeholder="Valideyn axtar..."
+                emptyLabel="Valideyn qeyd olunmayıb"
+                onChange={(personId) =>
                   setEditForm((prev) => ({
                     ...(prev ?? createEditForm(person)),
-                    parentId: e.target.value,
+                    parentId: personId,
                   }))
                 }
-              >
-                <option value="">Valideyn qeyd olunmayıb</option>
-                {availableParents.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.firstName} {p.lastName} {p.patronymic}
-                  </option>
-                ))}
-              </select>
+              />
 
-              <select
-                className="border rounded px-3 py-2 text-sm"
+              <PersonSelect
+                people={availableSpouses}
                 value={form.spouseId}
-                onChange={(e) =>
+                placeholder="Həyat yoldaşı axtar..."
+                emptyLabel="Həyat yoldaşı qeyd olunmayıb"
+                onChange={(personId) =>
                   setEditForm((prev) => ({
                     ...(prev ?? createEditForm(person)),
-                    spouseId: e.target.value,
+                    spouseId: personId,
                   }))
                 }
-              >
-                <option value="">Həyat yoldaşı qeyd olunmayıb</option>
-                {availableSpouses.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.firstName} {p.lastName} {p.patronymic}
-                  </option>
-                ))}
-              </select>
+              />
 
               <textarea
                 className="border rounded px-3 py-2 text-sm"
@@ -352,11 +481,11 @@ export default function PersonModal({
         ) : (
           <>
             <h1 className="mt-3 font-bold text-center text-gray-600">
-              {person.firstName} {person.lastName} {person.patronymic}
+              {getFullName(person)}
             </h1>
 
             <p className="text-center text-sm text-gray-500">
-              {person.birthYear} - {person.deathYear || ''}
+              {formatDate(person.birthDate)} - {formatDate(person.deathDate)}
             </p>
 
             <p className="mt-3 text-sm text-center text-gray-600">
@@ -378,7 +507,7 @@ export default function PersonModal({
       <ConfirmModal
         isOpen={showDeleteConfirm}
         title="Delete person"
-        message={`${person.firstName} ${person.lastName} ${person.patronymic} silmək istədiyinizə əminsiniz?`}
+        message={`${getFullName(person)} silmək istədiyinizə əminsiniz?`}
         confirmText="Sil"
         cancelText="Ləğv et"
         onCancel={() => setShowDeleteConfirm(false)}

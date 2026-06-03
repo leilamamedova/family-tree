@@ -3,6 +3,10 @@
 import { useState, useRef } from 'react';
 import { Person } from '@/types/person';
 import Image from 'next/image';
+import DatePicker from 'react-datepicker';
+import PersonSelect from './PersonSelect';
+
+import 'react-datepicker/dist/react-datepicker.css';
 
 type Mode = 'root' | 'child' | 'parent';
 
@@ -13,6 +17,10 @@ type Props = {
   onClose: () => void;
   onCreate: (person: Person, mode: Mode) => void;
 };
+
+function validateDateInput(value: string) {
+  return /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.\d{4}$/.test(value);
+}
 
 export default function AddPersonModal({
   isOpen,
@@ -26,10 +34,11 @@ export default function AddPersonModal({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [patronymic, setPatronymic] = useState('');
-  const [birthYear, setBirthYear] = useState<number | ''>('');
-  const [deathYear, setDeathYear] = useState<number | ''>('');
-  const [description, setDescription] = useState('');
 
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [deathDate, setDeathDate] = useState<Date | null>(null);
+
+  const [description, setDescription] = useState('');
   const [imageFile, setImageFile] = useState<string | null>(null);
 
   const [parentId, setParentId] = useState('');
@@ -38,24 +47,35 @@ export default function AddPersonModal({
   const [errors, setErrors] = useState({
     firstName: false,
     lastName: false,
+    invalidDates: false,
   });
 
+  const [birthDateError, setBirthDateError] = useState(false);
+  const [deathDateError, setDeathDateError] = useState(false);
+
   if (!isOpen) return null;
+
+  const availableSpouses = people.filter((person) => !person.spouseId);
 
   function resetForm() {
     setFirstName('');
     setLastName('');
     setPatronymic('');
-    setBirthYear('');
-    setDeathYear('');
+    setBirthDate(null);
+    setDeathDate(null);
     setImageFile(null);
     setDescription('');
     setParentId('');
     setSpouseId('');
+
     setErrors({
       firstName: false,
       lastName: false,
+      invalidDates: false,
     });
+
+    setBirthDateError(false);
+    setDeathDateError(false);
   }
 
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -70,24 +90,34 @@ export default function AddPersonModal({
     const newErrors = {
       firstName: !firstName.trim(),
       lastName: !lastName.trim(),
+      invalidDates: !!birthDate && !!deathDate && deathDate < birthDate,
     };
 
     setErrors(newErrors);
 
-    const hasErrors = Object.values(newErrors).some(Boolean);
+    const hasErrors =
+      Object.values(newErrors).some(Boolean) ||
+      birthDateError ||
+      deathDateError;
+
     if (hasErrors) return;
 
     const newPerson: Person = {
       id: crypto.randomUUID(),
+
       firstName,
       lastName,
       patronymic,
-      birthYear: birthYear === '' ? null : birthYear,
-      deathYear: deathYear === '' ? null : deathYear,
+
+      birthDate: birthDate ? birthDate.toISOString() : null,
+      deathDate: deathDate ? deathDate.toISOString() : null,
+
       image: imageFile || '/placeholder.png',
       description: description || '',
+
       parents: parentId ? [parentId] : [],
       children: [],
+
       spouseId: spouseId || null,
     };
 
@@ -179,59 +209,119 @@ export default function AddPersonModal({
             onChange={(e) => setPatronymic(e.target.value)}
           />
 
+          {birthDateError && (
+            <span className="text-red-500 text-xs">
+              Doğru tarix formatı daxil edin: dd.mm.yyyy
+            </span>
+          )}
+
+          {deathDateError && (
+            <span className="text-red-500 text-xs">
+              Doğru tarix formatı daxil edin: dd.mm.yyyy
+            </span>
+          )}
+
+          {errors.invalidDates && (
+            <span className="text-red-500 text-xs">
+              Ölüm tarixi doğum tarixindən əvvəl ola bilməz
+            </span>
+          )}
+
           <div className="flex gap-2">
-            <input
-              className="border rounded px-3 py-2 text-sm w-1/2"
-              placeholder="Doğum tarixi"
-              type="number"
-              value={birthYear}
-              onChange={(e) =>
-                setBirthYear(
-                  e.target.value === '' ? '' : Number(e.target.value),
-                )
-              }
+            <DatePicker
+              selected={birthDate}
+              onChange={(date: Date | null) => {
+                setBirthDateError(false);
+                setBirthDate(date);
+              }}
+              onChangeRaw={(e) => {
+                if (!e) return;
+
+                const value = (e.target as HTMLInputElement).value;
+
+                if (!value) {
+                  setBirthDateError(false);
+                  return;
+                }
+
+                setBirthDateError(!validateDateInput(value));
+              }}
+              onBlur={(e) => {
+                if (!e) return;
+
+                const value = (e.target as HTMLInputElement).value;
+
+                if (!value) {
+                  setBirthDateError(false);
+                }
+              }}
+              dateFormat="dd.MM.yyyy"
+              placeholderText="Doğum tarixi"
+              showYearDropdown
+              showMonthDropdown
+              dropdownMode="select"
+              isClearable
+              popperPlacement="top-start"
+              className={`border rounded px-3 py-2 text-sm w-full ${
+                birthDateError ? 'border-red-500' : 'border-gray-300'
+              }`}
             />
 
-            <input
-              className="border rounded px-3 py-2 text-sm w-1/2"
-              placeholder="Ölüm tarixi"
-              type="number"
-              value={deathYear}
-              onChange={(e) =>
-                setDeathYear(
-                  e.target.value === '' ? '' : Number(e.target.value),
-                )
-              }
+            <DatePicker
+              selected={deathDate}
+              onChange={(date: Date | null) => {
+                setDeathDateError(false);
+                setDeathDate(date);
+              }}
+              onChangeRaw={(e) => {
+                if (!e) return;
+
+                const value = (e.target as HTMLInputElement).value;
+
+                if (!value) {
+                  setDeathDateError(false);
+                  return;
+                }
+
+                setDeathDateError(!validateDateInput(value));
+              }}
+              onBlur={(e) => {
+                if (!e) return;
+
+                const value = (e.target as HTMLInputElement).value;
+
+                if (!value) {
+                  setDeathDateError(false);
+                }
+              }}
+              dateFormat="dd.MM.yyyy"
+              placeholderText="Ölüm tarixi"
+              showYearDropdown
+              showMonthDropdown
+              dropdownMode="select"
+              isClearable
+              popperPlacement="top-start"
+              className={`border rounded px-3 py-2 text-sm w-full ${
+                deathDateError ? 'border-red-500' : 'border-gray-300'
+              }`}
             />
           </div>
 
-          <select
-            className="border rounded px-3 py-2 text-sm"
+          <PersonSelect
+            people={people}
             value={parentId}
-            onChange={(e) => setParentId(e.target.value)}
-          >
-            <option value="">Valideyn qeyd olunmayıb</option>
-            {people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.firstName} {p.lastName} {p.patronymic}
-              </option>
-            ))}
-          </select>
+            placeholder="Valideyn axtar..."
+            emptyLabel="Valideyn qeyd olunmayıb"
+            onChange={setParentId}
+          />
 
-          <select
-            className="border rounded px-3 py-2 text-sm"
+          <PersonSelect
+            people={availableSpouses}
             value={spouseId}
-            onChange={(e) => setSpouseId(e.target.value)}
-          >
-            <option value="">Həyat yoldaşı qeyd olunmayıb</option>
-            {people
-              .filter((p) => !p.spouseId)
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.firstName} {p.lastName} {p.patronymic}
-                </option>
-              ))}
-          </select>
+            placeholder="Həyat yoldaşı axtar..."
+            emptyLabel="Həyat yoldaşı qeyd olunmayıb"
+            onChange={setSpouseId}
+          />
 
           <textarea
             className="border rounded px-3 py-2 text-sm"
