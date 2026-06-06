@@ -243,6 +243,10 @@ export default function AddPersonModal({
               }
             }}
             name="addFirstName"
+            autoComplete="off"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
 
           <input
@@ -259,6 +263,10 @@ export default function AddPersonModal({
               }
             }}
             name="addLastName"
+            autoComplete="off"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
 
           <input
@@ -267,6 +275,10 @@ export default function AddPersonModal({
             value={patronymic}
             onChange={(e) => setPatronymic(e.target.value)}
             name="addPatronymicName"
+            autoComplete="off"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
           />
 
           <div className="flex gap-2 w-full">
@@ -326,6 +338,7 @@ export default function AddPersonModal({
                 birthDateError ? 'border-red-500' : 'border-gray-300'
               }`}
               name="birthDate"
+              autoComplete="off"
             />
 
             <DatePicker
@@ -384,6 +397,7 @@ export default function AddPersonModal({
                 deathDateError ? 'border-red-500' : 'border-gray-300'
               }`}
               name="deathDate"
+              autoComplete="off"
             />
           </div>
 

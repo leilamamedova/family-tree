@@ -19,8 +19,10 @@ export function isValidDateRange(
   return new Date(deathDate) >= new Date(birthDate);
 }
 
-export function formatDateInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
+export function formatDateInput(value?: string | null) {
+  const digits = String(value ?? '')
+    .replace(/\D/g, '')
+    .slice(0, 8);
 
   if (digits.length <= 2) return digits;
   if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;

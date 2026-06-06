@@ -333,7 +333,9 @@ export default function PersonModal({
               className={`object-cover ${isEditing || form.image !== '/placeholder.png' ? 'cursor-pointer hover:border-gray-600' : ''}`}
               onLoad={() => setIsImageLoading(false)}
               onError={() => setIsImageLoading(false)}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
+
                 if (isEditing) {
                   fileInputRef.current?.click();
                   return;
@@ -387,6 +389,10 @@ export default function PersonModal({
                   }
                 }}
                 name="editFirstName"
+                autoComplete="off"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
               />
 
               <input
@@ -406,6 +412,10 @@ export default function PersonModal({
                   }
                 }}
                 name="addLastName"
+                autoComplete="off"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
               />
 
               <input
@@ -419,6 +429,10 @@ export default function PersonModal({
                   }))
                 }
                 name="addPatronymicName"
+                autoComplete="off"
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="off"
               />
 
               <div className="flex gap-2 w-full">
@@ -494,6 +508,7 @@ export default function PersonModal({
                     birthDateError ? 'border-red-500' : 'border-gray-300'
                   }`}
                   name="birthDate"
+                  autoComplete="off"
                 />
 
                 <DatePicker
@@ -568,6 +583,7 @@ export default function PersonModal({
                     deathDateError ? 'border-red-500' : 'border-gray-300'
                   }`}
                   name="deathDate"
+                  autoComplete="off"
                 />
               </div>
 

@@ -19,6 +19,11 @@ type LayoutEdge = {
   style?: CSSProperties;
 };
 
+type ChildUnit = {
+  childId: string;
+  unitKey: string;
+};
+
 const SPOUSE_EDGE_STYLE: CSSProperties = {
   stroke: '#f59e0b',
   strokeWidth: 2,
@@ -31,24 +36,31 @@ const FAMILY_EDGE_STYLE: CSSProperties = {
 
 export function buildTreeLayout(people: Person[]) {
   const map = new Map<string, Person>();
-  people.forEach((p) => map.set(p.id, p));
+  people.forEach((person) => map.set(person.id, person));
 
   const nodes: LayoutNode[] = [];
   const edges: LayoutEdge[] = [];
 
   const placedPeople = new Set<string>();
-  const renderedCouples = new Set<string>();
+  const placedUnits = new Set<string>();
+  const measuringUnits = new Set<string>();
+  const renderedEdges = new Set<string>();
   const connectorNodes = new Set<string>();
 
-  const LEVEL_HEIGHT = 260;
-  const NODE_WIDTH = 180;
-  const SPOUSE_GAP = 160;
-  const CONNECTOR_OFFSET_Y = 165;
+  const LEVEL_HEIGHT = 300;
+  const NODE_BOX_WIDTH = 170;
+  const SPOUSE_GAP = 180;
+  const CHILD_UNIT_GAP = 70;
+  const ROOT_GAP = 80;
+  const CONNECTOR_OFFSET_Y = 180;
   const CONNECTOR_SIZE = 8;
-  const PERSON_HANDLE_CENTER_X = 40;
 
   function getCoupleKey(a: string, b: string) {
     return [a, b].sort().join('__');
+  }
+
+  function getNode(id: string) {
+    return nodes.find((node) => node.id === id);
   }
 
   function getEffectiveParents(person: Person) {
@@ -57,7 +69,7 @@ export function buildTreeLayout(people: Person[]) {
     if (parents.length === 1) {
       const parent = map.get(parents[0]);
 
-      if (parent?.spouseId) {
+      if (parent?.spouseId && map.has(parent.spouseId)) {
         return [parent.id, parent.spouseId];
       }
     }
@@ -65,36 +77,161 @@ export function buildTreeLayout(people: Person[]) {
     return parents;
   }
 
-  function getCoupleChildren(parentA: string, parentB: string) {
-    return people.filter((p) => {
-      const parents = getEffectiveParents(p);
-
-      return parents.includes(parentA) && parents.includes(parentB);
-    });
-  }
-
-  function getSingleParentChildren(parentId: string) {
-    return people.filter((p) => {
-      const parents = getEffectiveParents(p);
-
-      return parents.length === 1 && parents[0] === parentId;
-    });
-  }
-
-  function getVisualWidth(personId: string) {
+  function getUnitKey(personId: string) {
     const person = map.get(personId);
 
-    if (!person) return NODE_WIDTH;
-
-    if (person.spouseId) {
-      return SPOUSE_GAP + NODE_WIDTH;
+    if (!person?.spouseId || !map.has(person.spouseId)) {
+      return personId;
     }
 
-    return NODE_WIDTH;
+    return getCoupleKey(person.id, person.spouseId);
+  }
+
+  function getUnitMembers(unitKey: string) {
+    return unitKey.split('__').filter((id) => map.has(id));
+  }
+
+  function getUnitOwnWidth(unitKey: string) {
+    const members = getUnitMembers(unitKey);
+
+    if (members.length === 2) {
+      return SPOUSE_GAP + NODE_BOX_WIDTH;
+    }
+
+    return NODE_BOX_WIDTH;
+  }
+
+  function getPersonParentUnitKeys(person: Person) {
+    const parents = getEffectiveParents(person);
+    const ownUnitKey = getUnitKey(person.id);
+    const parentUnitKeys = new Set<string>();
+
+    parents.forEach((parentId) => {
+      const parentUnitKey = getUnitKey(parentId);
+
+      if (parentUnitKey !== ownUnitKey) {
+        parentUnitKeys.add(parentUnitKey);
+      }
+    });
+
+    return Array.from(parentUnitKeys);
+  }
+
+  const allUnitKeys = Array.from(
+    new Set(people.map((person) => getUnitKey(person.id))),
+  );
+
+  const unitParentMap = new Map<string, string[]>();
+  const unitPrimaryParentMap = new Map<string, string>();
+
+  allUnitKeys.forEach((unitKey) => {
+    const parentUnitKeys = new Set<string>();
+
+    getUnitMembers(unitKey).forEach((memberId) => {
+      const member = map.get(memberId);
+
+      if (!member) return;
+
+      getPersonParentUnitKeys(member).forEach((parentUnitKey) => {
+        parentUnitKeys.add(parentUnitKey);
+      });
+    });
+
+    const parents = Array.from(parentUnitKeys);
+
+    unitParentMap.set(unitKey, parents);
+
+    if (parents.length > 0) {
+      unitPrimaryParentMap.set(unitKey, parents[0]);
+    }
+  });
+
+  const unitDepths = new Map<string, number>();
+
+  allUnitKeys.forEach((unitKey) => {
+    unitDepths.set(unitKey, 0);
+  });
+
+  for (let i = 0; i < allUnitKeys.length * 4; i += 1) {
+    let changed = false;
+
+    allUnitKeys.forEach((unitKey) => {
+      const parents = unitParentMap.get(unitKey) || [];
+
+      if (parents.length === 0) return;
+
+      const requiredDepth =
+        Math.max(
+          ...parents.map((parentUnitKey) => unitDepths.get(parentUnitKey) || 0),
+        ) + 1;
+
+      const currentDepth = unitDepths.get(unitKey) || 0;
+
+      if (currentDepth < requiredDepth) {
+        unitDepths.set(unitKey, requiredDepth);
+        changed = true;
+      }
+    });
+
+    if (!changed) break;
+  }
+
+  function getPrimaryChildUnits(parentUnitKey: string): ChildUnit[] {
+    const result: ChildUnit[] = [];
+    const seenUnits = new Set<string>();
+
+    people.forEach((person) => {
+      const unitKey = getUnitKey(person.id);
+
+      if (unitPrimaryParentMap.get(unitKey) !== parentUnitKey) return;
+      if (seenUnits.has(unitKey)) return;
+
+      seenUnits.add(unitKey);
+
+      result.push({
+        childId: person.id,
+        unitKey,
+      });
+    });
+
+    return result;
+  }
+
+  function measureUnit(unitKey: string): number {
+    if (measuringUnits.has(unitKey)) {
+      return getUnitOwnWidth(unitKey);
+    }
+
+    measuringUnits.add(unitKey);
+
+    const ownWidth = getUnitOwnWidth(unitKey);
+    const children = getPrimaryChildUnits(unitKey);
+
+    if (children.length === 0) {
+      measuringUnits.delete(unitKey);
+      return ownWidth;
+    }
+
+    const childrenWidth =
+      children.reduce((sum, childUnit) => {
+        return sum + measureUnit(childUnit.unitKey);
+      }, 0) +
+      Math.max(children.length - 1, 0) * CHILD_UNIT_GAP;
+
+    measuringUnits.delete(unitKey);
+
+    return Math.max(ownWidth, childrenWidth);
   }
 
   function addPersonNode(id: string, x: number, y: number) {
-    if (placedPeople.has(id)) return;
+    const existingNode = getNode(id);
+
+    if (existingNode) {
+      existingNode.x = x;
+      existingNode.y = y;
+      placedPeople.add(id);
+      return;
+    }
 
     placedPeople.add(id);
 
@@ -107,6 +244,14 @@ export function buildTreeLayout(people: Person[]) {
   }
 
   function addConnectorNode(id: string, x: number, y: number) {
+    const existingNode = getNode(id);
+
+    if (existingNode) {
+      existingNode.x = x;
+      existingNode.y = y;
+      return;
+    }
+
     if (connectorNodes.has(id)) return;
 
     connectorNodes.add(id);
@@ -120,12 +265,11 @@ export function buildTreeLayout(people: Person[]) {
   }
 
   function addSpouseEdge(personId: string, spouseId: string) {
-    const coupleKey = getCoupleKey(personId, spouseId);
-    const edgeKey = `spouse-${coupleKey}`;
+    const edgeKey = `spouse-${getCoupleKey(personId, spouseId)}`;
 
-    if (renderedCouples.has(edgeKey)) return;
+    if (renderedEdges.has(edgeKey)) return;
 
-    renderedCouples.add(edgeKey);
+    renderedEdges.add(edgeKey);
 
     edges.push({
       id: edgeKey,
@@ -138,188 +282,191 @@ export function buildTreeLayout(people: Person[]) {
     });
   }
 
-  function addCoupleChildrenLayout(
-    parentAId: string,
-    parentBId: string,
-    depth: number,
-    leftX: number,
-    rightX: number,
+  function addFamilyEdge(
+    id: string,
+    source: string,
+    target: string,
+    sourceHandle: string,
+    targetHandle: string,
   ) {
-    const coupleKey = getCoupleKey(parentAId, parentBId);
-    const childrenKey = `children-${coupleKey}`;
+    if (renderedEdges.has(id)) return;
 
-    if (renderedCouples.has(childrenKey)) return;
+    renderedEdges.add(id);
 
-    const children = getCoupleChildren(parentAId, parentBId);
+    edges.push({
+      id,
+      source,
+      target,
+      sourceHandle,
+      targetHandle,
+      type: 'step',
+      style: FAMILY_EDGE_STYLE,
+    });
+  }
+
+  function getUnitCenterX(unitKey: string) {
+    const members = getUnitMembers(unitKey);
+    const firstNode = getNode(members[0]);
+
+    if (!firstNode) return 0;
+
+    const ownWidth = getUnitOwnWidth(unitKey);
+
+    return firstNode.x + ownWidth / 2;
+  }
+
+  function getUnitY(unitKey: string) {
+    return (unitDepths.get(unitKey) || 0) * LEVEL_HEIGHT;
+  }
+
+  function layoutUnit(unitKey: string, leftX: number) {
+    if (placedUnits.has(unitKey)) return;
+
+    placedUnits.add(unitKey);
+
+    const members = getUnitMembers(unitKey);
+
+    if (members.length === 0) return;
+
+    const unitWidth = measureUnit(unitKey);
+    const ownWidth = getUnitOwnWidth(unitKey);
+    const ownLeftX = leftX + (unitWidth - ownWidth) / 2;
+    const y = getUnitY(unitKey);
+
+    const firstPersonId = members[0];
+    const secondPersonId = members[1];
+
+    addPersonNode(firstPersonId, ownLeftX, y);
+
+    if (secondPersonId) {
+      addPersonNode(secondPersonId, ownLeftX + SPOUSE_GAP, y);
+      addSpouseEdge(firstPersonId, secondPersonId);
+    }
+
+    const children = getPrimaryChildUnits(unitKey);
 
     if (children.length === 0) return;
 
-    renderedCouples.add(childrenKey);
+    const parentCenterX = ownLeftX + ownWidth / 2;
 
-    const y = depth * LEVEL_HEIGHT;
+    const childrenTotalWidth =
+      children.reduce((sum, childUnit) => {
+        return sum + measureUnit(childUnit.unitKey);
+      }, 0) +
+      Math.max(children.length - 1, 0) * CHILD_UNIT_GAP;
 
-    const leftHandleCenterX = leftX + PERSON_HANDLE_CENTER_X;
-    const rightHandleCenterX = rightX + PERSON_HANDLE_CENTER_X;
+    let currentChildX = parentCenterX - childrenTotalWidth / 2;
 
-    const connectorCenterX = (leftHandleCenterX + rightHandleCenterX) / 2;
-    const connectorX = connectorCenterX - CONNECTOR_SIZE / 2;
-    const connectorY = y + CONNECTOR_OFFSET_Y;
+    children.forEach((childUnit) => {
+      const childWidth = measureUnit(childUnit.unitKey);
 
-    const connectorId = `family-${coupleKey}`;
+      layoutUnit(childUnit.unitKey, currentChildX);
 
-    addConnectorNode(connectorId, connectorX, connectorY);
-
-    edges.push({
-      id: `parent-${parentAId}-${connectorId}`,
-      source: parentAId,
-      target: connectorId,
-      sourceHandle: 'child-source',
-      targetHandle: 'top',
-      type: 'straight',
-      style: FAMILY_EDGE_STYLE,
-    });
-
-    edges.push({
-      id: `parent-${parentBId}-${connectorId}`,
-      source: parentBId,
-      target: connectorId,
-      sourceHandle: 'child-source',
-      targetHandle: 'top',
-      type: 'straight',
-      style: FAMILY_EDGE_STYLE,
-    });
-
-    const childWidths = children.map((child) => getVisualWidth(child.id));
-    const totalWidth = childWidths.reduce((sum, width) => sum + width, 0);
-    const totalGaps = Math.max(children.length - 1, 0) * 40;
-    const fullWidth = totalWidth + totalGaps;
-
-    let currentX = connectorCenterX - fullWidth / 2;
-
-    children.forEach((child, index) => {
-      const childWidth = childWidths[index];
-      const childX = currentX + childWidth / 2 - PERSON_HANDLE_CENTER_X;
-
-      edges.push({
-        id: `${connectorId}-${child.id}`,
-        source: connectorId,
-        target: child.id,
-        sourceHandle: 'bottom',
-        targetHandle: 'child-target',
-        type: 'straight',
-        style: FAMILY_EDGE_STYLE,
-      });
-
-      dfs(child.id, depth + 1, childX);
-
-      currentX += childWidth + 40;
+      currentChildX += childWidth + CHILD_UNIT_GAP;
     });
   }
 
-  function dfs(id: string, depth: number, x: number) {
-    const person = map.get(id);
+  function addAllFamilyEdges() {
+    people.forEach((person) => {
+      const parents = getEffectiveParents(person);
 
-    if (!person) return;
+      if (parents.length === 0) return;
 
-    const y = depth * LEVEL_HEIGHT;
+      const parentUnitKey = getUnitKey(parents[0]);
+      const parentMembers = getUnitMembers(parentUnitKey);
 
-    addPersonNode(id, x, y);
+      if (parentMembers.length === 0) return;
 
-    const spouseId = person.spouseId;
-    const spouse = spouseId ? map.get(spouseId) : null;
+      const firstParentNode = getNode(parentMembers[0]);
 
-    if (spouseId && spouse) {
-      const existingPersonNode = nodes.find((n) => n.id === id);
-      const personX = existingPersonNode?.x ?? x;
+      if (!firstParentNode) return;
 
-      const existingSpouseNode = nodes.find((n) => n.id === spouseId);
-      const spouseX = existingSpouseNode
-        ? existingSpouseNode.x
-        : personX + SPOUSE_GAP;
+      const parentCenterX = getUnitCenterX(parentUnitKey);
+      const connectorId = `family-${parentUnitKey}`;
+      const connectorX = parentCenterX - CONNECTOR_SIZE / 2;
+      const connectorY = firstParentNode.y + CONNECTOR_OFFSET_Y;
 
-      addPersonNode(spouseId, spouseX, y);
+      addConnectorNode(connectorId, connectorX, connectorY);
 
-      addSpouseEdge(id, spouseId);
-
-      const leftX = Math.min(personX, spouseX);
-      const rightX = Math.max(personX, spouseX);
-
-      addCoupleChildrenLayout(id, spouseId, depth, leftX, rightX);
-
-      const singleChildren = getSingleParentChildren(id);
-
-      singleChildren.forEach((child, index) => {
-        const childX = x + index * NODE_WIDTH;
-
-        edges.push({
-          id: `${id}-${child.id}`,
-          source: id,
-          target: child.id,
-          sourceHandle: 'child-source',
-          targetHandle: 'child-target',
-          type: 'straight',
-          style: FAMILY_EDGE_STYLE,
-        });
-
-        dfs(child.id, depth + 1, childX);
+      parentMembers.forEach((parentId) => {
+        addFamilyEdge(
+          `parent-${parentId}-${connectorId}`,
+          parentId,
+          connectorId,
+          'child-source',
+          'top',
+        );
       });
 
-      return;
-    }
-
-    const singleChildren = getSingleParentChildren(id);
-
-    singleChildren.forEach((child, index) => {
-      const childX = x + index * NODE_WIDTH;
-
-      edges.push({
-        id: `${id}-${child.id}`,
-        source: id,
-        target: child.id,
-        sourceHandle: 'child-source',
-        targetHandle: 'child-target',
-        type: 'straight',
-        style: FAMILY_EDGE_STYLE,
-      });
-
-      dfs(child.id, depth + 1, childX);
+      addFamilyEdge(
+        `${connectorId}-${person.id}`,
+        connectorId,
+        person.id,
+        'bottom',
+        'child-target',
+      );
     });
   }
 
-  const roots = people.filter((person) => {
-    const parents = getEffectiveParents(person);
-
-    if (parents.length > 0) return false;
-
-    if (person.spouseId) {
-      const spouse = map.get(person.spouseId);
-
-      if (spouse?.parents && spouse.parents.length > 0) {
-        return false;
-      }
-
-      return person.id < person.spouseId;
-    }
-
-    return true;
+  const rootUnits = allUnitKeys.filter((unitKey) => {
+    return (unitParentMap.get(unitKey) || []).length === 0;
   });
 
-  let startX = 0;
+  let currentRootX = 0;
 
-  roots.forEach((root) => {
-    if (placedPeople.has(root.id)) return;
+  rootUnits.forEach((unitKey) => {
+    if (placedUnits.has(unitKey)) return;
 
-    dfs(root.id, 0, startX);
+    const width = measureUnit(unitKey);
 
-    startX += NODE_WIDTH * 5;
+    layoutUnit(unitKey, currentRootX);
+
+    currentRootX += width + ROOT_GAP;
   });
 
-  people.forEach((person) => {
-    if (!placedPeople.has(person.id)) {
-      dfs(person.id, 0, startX);
-      startX += NODE_WIDTH * 5;
-    }
+  allUnitKeys.forEach((unitKey) => {
+    if (placedUnits.has(unitKey)) return;
+
+    const width = measureUnit(unitKey);
+
+    layoutUnit(unitKey, currentRootX);
+
+    currentRootX += width + ROOT_GAP;
   });
+
+  function compactRows() {
+    const rows = new Map<number, LayoutNode[]>();
+
+    nodes.forEach((node) => {
+      if (node.type !== 'person') return;
+
+      const row = rows.get(node.y) || [];
+      row.push(node);
+      rows.set(node.y, row);
+    });
+
+    rows.forEach((row) => {
+      row.sort((a, b) => a.x - b.x);
+
+      let nextX = row[0]?.x ?? 0;
+
+      row.forEach((node, index) => {
+        if (index === 0) {
+          nextX = node.x + NODE_BOX_WIDTH + CHILD_UNIT_GAP;
+          return;
+        }
+
+        if (node.x > nextX) {
+          node.x = nextX;
+        }
+
+        nextX = node.x + NODE_BOX_WIDTH + CHILD_UNIT_GAP;
+      });
+    });
+  }
+
+  // compactRows();
+  addAllFamilyEdges();
 
   return { nodes, edges };
 }
