@@ -451,7 +451,7 @@ export default function AddPersonModal({
             className="text-black border px-3 py-1 rounded"
             disabled={isSubmitting}
           >
-            Ləğv et
+            İmtina
           </button>
 
           <button

@@ -434,36 +434,36 @@ export function buildTreeLayout(people: Person[]) {
     currentRootX += width + ROOT_GAP;
   });
 
-  function compactRows() {
-    const rows = new Map<number, LayoutNode[]>();
+  // function compactRows() {
+  //   const rows = new Map<number, LayoutNode[]>();
 
-    nodes.forEach((node) => {
-      if (node.type !== 'person') return;
+  //   nodes.forEach((node) => {
+  //     if (node.type !== 'person') return;
 
-      const row = rows.get(node.y) || [];
-      row.push(node);
-      rows.set(node.y, row);
-    });
+  //     const row = rows.get(node.y) || [];
+  //     row.push(node);
+  //     rows.set(node.y, row);
+  //   });
 
-    rows.forEach((row) => {
-      row.sort((a, b) => a.x - b.x);
+  //   rows.forEach((row) => {
+  //     row.sort((a, b) => a.x - b.x);
 
-      let nextX = row[0]?.x ?? 0;
+  //     let nextX = row[0]?.x ?? 0;
 
-      row.forEach((node, index) => {
-        if (index === 0) {
-          nextX = node.x + NODE_BOX_WIDTH + CHILD_UNIT_GAP;
-          return;
-        }
+  //     row.forEach((node, index) => {
+  //       if (index === 0) {
+  //         nextX = node.x + NODE_BOX_WIDTH + CHILD_UNIT_GAP;
+  //         return;
+  //       }
 
-        if (node.x > nextX) {
-          node.x = nextX;
-        }
+  //       if (node.x > nextX) {
+  //         node.x = nextX;
+  //       }
 
-        nextX = node.x + NODE_BOX_WIDTH + CHILD_UNIT_GAP;
-      });
-    });
-  }
+  //       nextX = node.x + NODE_BOX_WIDTH + CHILD_UNIT_GAP;
+  //     });
+  //   });
+  // }
 
   // compactRows();
   addAllFamilyEdges();

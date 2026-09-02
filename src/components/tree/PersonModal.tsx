@@ -652,7 +652,7 @@ export default function PersonModal({
                 className="text-black border px-3 py-1 rounded"
                 disabled={isSubmitting}
               >
-                Ləğv et
+                İmtina
               </button>
 
               <button
@@ -728,7 +728,7 @@ export default function PersonModal({
         title="Silmək"
         message={`${getFullName(person)} silmək istədiyinizə əminsiniz?`}
         confirmText="Sil"
-        cancelText="Ləğv et"
+        cancelText="İmtina"
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={() => {
           onDelete(person.id);
